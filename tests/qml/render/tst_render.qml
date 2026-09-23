@@ -181,6 +181,26 @@ TestCase {
     render("09-scrolling-layout", fathom)
   }
 
+  // ChatGPT was on screen at an earlier switch, then the scrolling layout
+  // parked it: its card shows the frame it kept, marked as such. Brave was
+  // never seen: its card says why there is no preview.
+  function test_10_snapshot() {
+    const live = testCase.scrolling.map(row => [row[0], row[1], row[2], row[3], 2496, 28, row[6], row[7], row[8],
+      row[0] === "brave-origin" ? { noContent: true } : {}])
+    let fathom = open(6, 1600, 1000, "browse", live, 2496)
+    wait(700)
+    FakeSystem.ipc("fathom").cancel()
+    const parked = []
+    for (let i = 0; i < 6; i++) parked.push(toplevel(testCase.scrolling[i], i))
+    Hyprland.toplevels = { values: parked }
+    FakeSystem.ipc("fathom").open()
+    tryVerify(function() { return fathom.revealed }, 1000)
+    fathom.jumpTo(3)
+    render("10-snapshot", fathom)
+    fathom.jumpTo(1)
+    render("11-never-seen", fathom)
+  }
+
   function test_8_forty_windows() {
     const fathom = open(40, 1920, 1080, "hold")
     render("08-forty-windows", fathom)

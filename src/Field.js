@@ -59,6 +59,23 @@ function ageShort(seconds, active, estimated) {
     return Math.floor(value / 86400) + "d";
 }
 
+// The gauge's marks: depth d is 30 * (2^d - 1) seconds ago.
+function depthMarkLabel(depth) {
+    var d = Math.round(Number(depth) || 0);
+    if (d <= 0) return "now";
+    if (d >= 8) return "2h+";
+    return ageShort(30 * (Math.pow(2, d) - 1), false, false);
+}
+
+// "2.3 fathoms", "1 fathom". Depth is Fathom's unit for how far back a window
+// was used; an estimated age has no reading.
+function fathomLabel(depth, active, estimated) {
+    if (active || estimated) return "";
+    var d = Math.round(Math.max(0, Number(depth) || 0) * 10) / 10;
+    if (d === 0) return "at the surface";
+    return d + (d === 1 ? " fathom" : " fathoms");
+}
+
 function isSpecialName(name) {
     return String(name || "").indexOf("special") === 0;
 }

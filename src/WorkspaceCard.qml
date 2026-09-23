@@ -201,12 +201,7 @@ Item {
         readonly property bool urgent: !!(entry && entry.toplevel && entry.toplevel.urgent)
         readonly property real inset: Math.min(1.5, rect.width / 6)
         // A scrolling layout parks windows beside the screen: shown, dimmer.
-        readonly property bool parked: {
-          const viewport = card.items.viewport
-          if (!viewport) return false
-          return rect.x >= viewport.x + viewport.width - 1 || rect.x + rect.width <= viewport.x + 1
-            || rect.y >= viewport.y + viewport.height - 1 || rect.y + rect.height <= viewport.y + 1
-        }
+        readonly property bool parked: Layout.outside(card.windows[index], card.viewport)
 
         x: rect.x + inset
         y: rect.y + inset

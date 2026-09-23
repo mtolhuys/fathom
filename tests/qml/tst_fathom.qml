@@ -594,4 +594,55 @@ TestCase {
     tryVerify(function() { return !fathom.opened }, 1000)
     tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xb2" })'], 1000)
   }
+
+  function test_a_window_that_stops_delivering_frames_shows_its_last_snapshot() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    tryVerify(function() { return JSON.parse(FakeSystem.ipc("fathom").state()).snapshots === 3 }, 3000,
+      "every card with a frame keeps a snapshot")
+    FakeSystem.ipc("fathom").cancel()
+
+    // b2 is now parked beside the screen: no frames any more.
+    const parked = toplevel("b2", 1, 1, { contentReady: false })
+    parked.lastIpcObject.at = [5000, 0]
+    Hyprland.toplevels = { values: [Hyprland.toplevels.values[0], parked, Hyprland.toplevels.values[2]] }
+    Hyprland.monitors = { values: [{ name: "eDP-1", x: 0, y: 0, width: 1600, height: 1000, scale: 1, activeWorkspace: { id: 1 } }] }
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    const card = fathom.fieldView.planeAt(1)
+    verify(!card.hasContent)
+    verify(card.parked, "the card knows why no frame comes")
+    verify(card.showsSnapshot, "it shows the last frame seen instead")
+    const rows = JSON.parse(FakeSystem.ipc("fathom").captures())
+    compare(rows[1].snapshot, true)
+    compare(rows[1].parked, true)
+    FakeSystem.ipc("fathom").cancel()
+
+    // A snapshot leaves with its window.
+    Hyprland.rawEvent({ name: "closewindow", data: "b2" })
+    compare(JSON.parse(FakeSystem.ipc("fathom").state()).snapshots, 2)
+  }
+
+  function test_the_sounding_line_picks_by_depth_and_the_lead_follows() {
+    FakeSystem.surfaceWidth = 1200
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    const gauge = fathom.fieldView.gauge
+    verify(gauge.visible, "shown on a screen wide enough")
+    compare(gauge.marks.length, 3)
+    // c3 sits log2(3) fathoms down (seeded two steps back).
+    const y = Layout.soundingY(Math.log(3) / Math.LN2, gauge.lineTop, gauge.lineBottom)
+    mouseClick(gauge, gauge.lineX + 12, y)
+    compare(fathom.selectedIndex, 2)
+    tryVerify(function() { return Math.abs(gauge.leadDepth - fathom.field[2].depth) < 1e-3 }, 1000,
+      "the lead goes down to the selection")
+    // Dragging back up to the surface.
+    mousePress(gauge, gauge.lineX + 12, y)
+    mouseMove(gauge, gauge.lineX + 12, gauge.lineTop)
+    mouseRelease(gauge, gauge.lineX + 12, gauge.lineTop)
+    compare(fathom.selectedIndex, 0)
+    verify(fathom.opened)
+  }
 }

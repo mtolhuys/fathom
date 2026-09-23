@@ -35,7 +35,7 @@ if [[ -n $qmllint_bin ]]; then
   qt_qml_dir=$(qtpaths6 --query QT_INSTALL_QML 2>/dev/null || echo /usr/lib/qt6/qml)
   (cd "$project_root/src" && "$qmllint_bin" --bare -I "$project_root/tests/qml/stubs" -I "$qt_qml_dir" \
     --import disable --unresolved-type disable \
-    Fathom.qml FieldView.qml WindowPlane.qml WorkspaceMap.qml WorkspaceCard.qml AppIcon.qml \
+    Fathom.qml FieldView.qml WindowPlane.qml WorkspaceMap.qml WorkspaceCard.qml AppIcon.qml SoundingLine.qml \
     RecencyTracker.qml FrameProbe.qml)
   printf 'ok - qmllint\n'
 fi

@@ -18,6 +18,7 @@ Item {
   readonly property alias probe: probe
   readonly property int planeCount: planes.count
   readonly property alias map: map
+  readonly property alias gauge: gauge
 
   // One unit is a pixel on a 1000 px tall screen; everything scales with it.
   readonly property real unit: Math.max(0.75, Math.min(1.6, height / 1000))
@@ -80,6 +81,26 @@ Item {
     }
   }
 
+  // Light from the surface, fading as the selection goes deeper; the whole
+  // scene darkens with it. Diving into older windows feels like diving.
+  Rectangle {
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: parent.height * 0.45
+    opacity: 1 - view.sceneDepth / 8
+    gradient: Gradient {
+      GradientStop { position: 0.0; color: Qt.alpha(Color.foreground, 0.06) }
+      GradientStop { position: 1.0; color: Qt.alpha(Color.foreground, 0) }
+    }
+  }
+
+  Rectangle {
+    anchors.fill: parent
+    color: Color.background
+    opacity: view.sceneDepth * 0.035
+    visible: opacity > 0.005
+  }
+
   // A click on empty space closes the field without focusing anything; any
   // pointer movement keeps a held field alive.
   MouseArea {
@@ -101,9 +122,22 @@ Item {
 
   readonly property real mapHeight: Math.max(96, Math.min(height * 0.2, 210 * unit))
   readonly property real captionHeight: 62 * unit
+  readonly property real deepTop: margin + 44 * unit
+  // The sounding line takes a column on the left when there is room for it.
+  readonly property real gaugeWidth: width >= 1000 ? 112 * textUnit : 0
   // Cards take the shape of this screen, which is the focused monitor.
-  readonly property var stage: Layout.deepStage(width, height, margin + 44 * unit,
-    mapHeight + captionHeight + margin + 30 * unit, width / Math.max(1, height))
+  readonly property var stage: Layout.deepStage(width, height, deepTop,
+    mapHeight + captionHeight + margin + 30 * unit, width / Math.max(1, height), margin + gaugeWidth)
+
+  // How deep the selection sits, animated: the lead follows it down the
+  // sounding line and the light fades with it.
+  readonly property real selectedDepth: entry ? Math.min(8, Math.max(0, entry.depth)) : 0
+  property real sceneDepth: selectedDepth
+
+  Behavior on sceneDepth {
+    enabled: view.controller !== null && view.controller.cameraAnimated
+    NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+  }
 
   Item {
     id: deep
@@ -122,6 +156,22 @@ Item {
         textUnit: view.textUnit
       }
     }
+  }
+
+  // ------------------------------------------------------------ the sounding line
+
+  SoundingLine {
+    id: gauge
+
+    x: view.margin
+    y: view.deepTop
+    width: view.gaugeWidth
+    height: view.stage.frontY + view.stage.frontHeight / 2 - view.deepTop
+    visible: view.gaugeWidth > 0
+    controller: view.controller
+    unit: view.unit
+    textUnit: view.textUnit
+    leadDepth: view.sceneDepth
   }
 
   // ------------------------------------------------------------ caption
@@ -188,6 +238,8 @@ Item {
           const tab = Focus.groupIndexFor(entry.address, entry.grouped)
           if (tab > 0 && entry.grouped.length > 1) parts.push("tab " + tab + " of " + entry.grouped.length)
           parts.push(Field.ageLabel(entry.seconds, entry.active, entry.estimated))
+          const reading = Field.fathomLabel(entry.depth, entry.active, entry.estimated)
+          if (reading) parts.push(reading)
           if (entry.toplevel && entry.toplevel.urgent) parts.push("wants attention")
           return parts.join("  ·  ")
         }

@@ -1,4 +1,5 @@
 .pragma library
+.import "Depth.js" as Depth
 
 // Geometry for the two halves of the field. Pure functions: FieldView binds
 // to them, and the node tests load the same file.
@@ -46,9 +47,10 @@ function fit(boxWidth, boxHeight, aspect) {
 }
 
 // The front box for a screen of width x height, between `top` and
-// `height - bottom`, for cards of `aspect`. The whole stack (front card plus
-// the cards behind it) is centered in that area.
-function deepStage(width, height, top, bottom, aspect) {
+// `height - bottom` and right of `left`, for cards of `aspect`. The whole
+// stack (front card plus the cards behind it) is centered in that area.
+function deepStage(width, height, top, bottom, aspect, left) {
+    var inset = Math.max(0, Number(left) || 0);
     var a = clamp(Number(aspect) || 1.6, 1.2, 2.4);
     var available = Math.max(1, height - top - bottom);
     var reach = stepSum(VISIBLE_STEPS);
@@ -58,12 +60,17 @@ function deepStage(width, height, top, bottom, aspect) {
         frontWidth = width * 0.5;
         frontHeight = frontWidth / a;
     }
+    var room = width - inset;
+    if (frontWidth > room * 0.55) {
+        frontWidth = room * 0.55;
+        frontHeight = frontWidth / a;
+    }
     var margin = width * 0.03;
-    var spread = Math.max(0, Math.min(frontWidth * 0.85, width - margin * 2 - frontWidth));
+    var spread = Math.max(0, Math.min(frontWidth * 0.85, room - margin * 2 - frontWidth));
     var stackHeight = frontHeight * (1 + RISE * reach);
     var stackTop = top + (available - stackHeight) / 2;
     return {
-        frontX: (width - frontWidth - spread) / 2 + frontWidth / 2,
+        frontX: inset + (room - frontWidth - spread) / 2 + frontWidth / 2,
         frontY: stackTop + RISE * frontHeight * reach + frontHeight / 2,
         frontWidth: frontWidth,
         frontHeight: frontHeight,
@@ -105,6 +112,52 @@ function deepPlane(stage, r) {
     };
 }
 
+// ------------------------------------------------------------ the sounding line
+
+// The gauge beside the Deep reads depth the way a lead line reads water: the
+// surface (depth 0, now) at `top`, MAX_DEPTH (two hours and more) at `bottom`.
+function soundingY(depth, top, bottom) {
+    return top + (bottom - top) * Depth.clampDepth(depth) / Depth.MAX_DEPTH;
+}
+
+// One mark per window: its y on the gauge and a column, so windows at nearly
+// the same depth sit side by side instead of on top of each other.
+function soundingMarks(depths, top, bottom, spacing) {
+    var list = depths || [];
+    var gap = spacing > 0 ? spacing : 6;
+    var marks = [];
+    var rows = [];
+    for (var i = 0; i < list.length; i++) {
+        var y = soundingY(list[i], top, bottom);
+        var column = 0;
+        for (var j = 0; j < rows.length; j++) {
+            if (Math.abs(rows[j].y - y) < gap) {
+                column = rows[j].count;
+                rows[j].count++;
+                y = rows[j].y;
+                break;
+            }
+        }
+        if (j === rows.length) rows.push({ y: y, count: 1 });
+        marks.push({ y: y, column: column });
+    }
+    return marks;
+}
+
+// The mark nearest a point on the gauge, by depth first, then by column.
+function nearestMark(marks, y, column) {
+    var best = -1;
+    var bestScore = Infinity;
+    for (var i = 0; i < (marks || []).length; i++) {
+        var score = Math.abs(marks[i].y - y) * 4 + Math.abs(marks[i].column - (column || 0));
+        if (score < bestScore) {
+            bestScore = score;
+            best = i;
+        }
+    }
+    return best;
+}
+
 // ------------------------------------------------------------ the map
 
 // The rectangle a workspace's minimap has to show: its monitor's viewport,
@@ -126,6 +179,15 @@ function minimapBounds(viewport, windows) {
         bottom = Math.max(bottom, w.y + w.height);
     }
     return { x: left, y: top, width: Math.max(1, right - left), height: Math.max(1, bottom - top) };
+}
+
+// Whether a rectangle lies entirely outside another (touching counts as
+// outside). A window outside its monitor's area is one Hyprland does not
+// render, so it cannot be captured.
+function outside(rect, area) {
+    if (!rect || !area) return false;
+    return rect.x >= area.x + area.width || rect.x + rect.width <= area.x
+        || rect.y >= area.y + area.height || rect.y + rect.height <= area.y;
 }
 
 // Maps a rectangle in compositor coordinates into a box of boxWidth x
@@ -215,7 +277,7 @@ function mapCards(aspects, available, height, gap, chrome, minWidth) {
     var widths = [];
     var total = 0;
     for (var i = 0; i < list.length; i++) {
-        var aspect = clamp(Number(list[i]) || 1.6, 0.8, 3.2);
+        var aspect = clamp(Number(list[i]) || 1.6, 0.8, 5);
         var width = height * aspect + chrome;
         widths.push(width);
         total += width;

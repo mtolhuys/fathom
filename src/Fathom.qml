@@ -88,7 +88,10 @@ Item {
   RecencyTracker {
     id: recency
 
-    onWindowClosed: address => root.markClosed(address)
+    onWindowClosed: address => {
+      root.dropSnapshot(address)
+      root.markClosed(address)
+    }
   }
 
   // ------------------------------------------------------------ the field
@@ -261,6 +264,41 @@ Item {
     const valid = index >= 0 && index < root.slots.length && root.slots[index] >= 0
     root.selectedIndex = valid ? index : -1
     if (valid) root.cameraSlot = root.slots[index]
+  }
+
+  // ------------------------------------------------------------ snapshots
+
+  // Hyprland renders a window for capture only while it lies within its
+  // monitor's area; a scrolling layout parks windows beside the screen, and
+  // those never deliver a frame. So each card keeps the last frame it saw
+  // while the field was open, here, in memory only (never on disk), and shows
+  // it, marked with its age, when a live frame does not come. Bounded to
+  // snapshotLimit windows, oldest dropped first; a window's snapshot goes
+  // when the window closes.
+  readonly property int snapshotLimit: 24
+  readonly property int snapshotWidth: 640
+  property var snapshots: ({})
+
+  function keepSnapshot(address, result) {
+    const key = Recency.normalizeAddress(address)
+    if (!key || !result || !result.url) return false
+    const next = Object.assign({}, root.snapshots)
+    next[key] = { url: String(result.url), takenAt: Date.now(), result: result }
+    const keys = Object.keys(next)
+    if (keys.length > root.snapshotLimit) {
+      keys.sort((a, b) => next[a].takenAt - next[b].takenAt)
+      for (let i = 0; i < keys.length - root.snapshotLimit; i++) delete next[keys[i]]
+    }
+    root.snapshots = next
+    return true
+  }
+
+  function dropSnapshot(address) {
+    const key = Recency.normalizeAddress(address)
+    if (!key || !(key in root.snapshots)) return
+    const next = Object.assign({}, root.snapshots)
+    delete next[key]
+    root.snapshots = next
   }
 
   function markClosed(address) {
@@ -568,6 +606,7 @@ Item {
       selectedIndex: root.selectedIndex,
       filter: root.filterText,
       usingLua: Hyprland.usingLua,
+      snapshots: Object.keys(root.snapshots).length,
       trackedWindows: recency.trackedCount(),
       seeded: recency.seeded,
       screen: root.targetScreen ? String(root.targetScreen.name || "") : ""
@@ -611,6 +650,8 @@ Item {
         workspaceVisible: plane.entry.workspaceId !== null && visible.indexOf(plane.entry.workspaceId) !== -1,
         capturing: plane.capturing,
         hasContent: plane.hasContent,
+        snapshot: plane.snapshot !== null,
+        parked: plane.parked,
         sourceSize: plane.hasContent ? plane.sourceSize.width + "x" + plane.sourceSize.height : ""
       })
     }

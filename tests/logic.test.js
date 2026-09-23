@@ -426,6 +426,37 @@ test('the camera moves continuously and passed cards fade out', () => {
   assert.equal(Layout.deepPlane(stage, -Layout.PASSED_FADE).opacity, 0);
 });
 
+test('the stage leaves room on the left for the sounding line', () => {
+  const inset = Layout.deepStage(1600, 1000, 70, 320, 1.6, 150);
+  assert.ok(inset.frontX - inset.frontWidth / 2 >= 150, 'the front card starts right of the gauge');
+  const back = Layout.deepPlane(inset, Layout.VISIBLE_STEPS);
+  assert.ok(back.x + back.width / 2 <= 1600);
+});
+
+test('the sounding line reads depth from the surface down', () => {
+  close(Layout.soundingY(0, 100, 500), 100);
+  close(Layout.soundingY(4, 100, 500), 300);
+  close(Layout.soundingY(8, 100, 500), 500);
+  close(Layout.soundingY(20, 100, 500), 500);
+  const marks = Layout.soundingMarks([0, 1, 1.01, 1.02, 8], 100, 500, 6);
+  assert.deepEqual(Array.from(marks, (m) => m.column), [0, 0, 1, 2, 0], 'windows at the same depth sit side by side');
+  close(marks[2].y, marks[1].y);
+  assert.equal(Layout.nearestMark(marks, 148, 0), 1);
+  assert.equal(Layout.nearestMark(marks, 150, 2), 3);
+  assert.equal(Layout.nearestMark(marks, 490, 0), 4);
+  assert.equal(Layout.nearestMark([], 100, 0), -1);
+});
+
+test('the gauge marks fathoms in time, the caption reads them', () => {
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7, 8].map(Field.depthMarkLabel),
+    ['now', '30s', '1m', '3m', '7m', '15m', '31m', '1h', '2h+']);
+  assert.equal(Field.fathomLabel(2.34), '2.3 fathoms');
+  assert.equal(Field.fathomLabel(1), '1 fathom');
+  assert.equal(Field.fathomLabel(0.02), 'at the surface');
+  assert.equal(Field.fathomLabel(3, true, false), '', 'the focused window says so already');
+  assert.equal(Field.fathomLabel(3, false, true), '', 'an estimate has no reading');
+});
+
 test('windows fit their card without distortion', () => {
   const portrait = Layout.fit(800, 500, 0.8);
   close(portrait.height, 500);
@@ -451,6 +482,17 @@ test('minimaps show the screen and the windows parked beside it', () => {
   close(items.rects[0].width, 80);
   close(items.rects[1].x, 80);
   close(items.viewport.width, 160);
+});
+
+test('a window is outside its monitor only when nothing of it overlaps', () => {
+  const monitor = { x: 2496, y: 0, width: 1600, height: 1000 };
+  assert.equal(Layout.outside({ x: 2501, y: 28, width: 1590, height: 970 }, monitor), false);
+  assert.equal(Layout.outside({ x: -698, y: 28, width: 1593, height: 970 }, monitor), true);
+  assert.equal(Layout.outside({ x: 4099, y: 28, width: 1593, height: 970 }, monitor), true);
+  assert.equal(Layout.outside({ x: 4000, y: 28, width: 800, height: 970 }, monitor), false, 'partly on screen');
+  assert.equal(Layout.outside({ x: 903, y: 28, width: 1593, height: 970 }, monitor), true, 'touching the edge');
+  assert.equal(Layout.outside(null, monitor), false);
+  assert.equal(Layout.outside({ x: 0, y: 0, width: 1, height: 1 }, null), false);
 });
 
 test('tabs of a group split their rectangle, unknown geometry falls back to a grid', () => {

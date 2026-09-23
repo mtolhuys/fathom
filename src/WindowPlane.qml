@@ -60,6 +60,24 @@ Item {
     ? Math.min(0.7, Math.max(0, Math.min(1, r)) * (0.12 + Depth.fogForDepth(entry.depth) * 0.75) + 0.05 * Math.max(0, r - 1))
     : 0
   readonly property string titleText: toplevel && toplevel.title ? String(toplevel.title) : (entry ? entry.title : "")
+  // Outside its monitor's area (a scrolling layout parked it beside the
+  // screen): Hyprland does not render it, so no live frame will come.
+  readonly property bool parked: controller !== null && entry !== null
+    && Layout.outside(controller.geometryOf(entry), controller.monitorInfo[entry.monitorName])
+  // The last frame seen of this window while the field was open, if any.
+  readonly property var snapshot: controller && entry ? (controller.snapshots[entry.address] || null) : null
+  readonly property bool showsSnapshot: !capture.hasContent && snapshot !== null
+
+  // Keeps the frame a moment after it arrives (the first one can be partial).
+  function takeSnapshot() {
+    if (!capture.hasContent || !controller || !controller.opened || !entry || !visible) return
+    const source = capture.sourceSize
+    const width = Math.max(1, Math.min(controller.snapshotWidth, source.width))
+    const height = Math.max(1, Math.round(width * source.height / Math.max(1, source.width)))
+    const address = entry.address
+    const target = controller
+    capture.grabToImage(result => target.keepSnapshot(address, result), Qt.size(width, height))
+  }
 
   x: geometry.x - geometry.width / 2
   y: geometry.y - geometry.height / 2
@@ -74,7 +92,18 @@ Item {
     NumberAnimation { duration: 160 }
   }
 
-  onHasContentChanged: if (hasContent && controller) controller.noteFirstContent()
+  onHasContentChanged: {
+    if (!hasContent || !controller) return
+    controller.noteFirstContent()
+    snapshotTimer.restart()
+  }
+
+  Timer {
+    id: snapshotTimer
+
+    interval: 400
+    onTriggered: card.takeSnapshot()
+  }
 
   RectangularShadow {
     anchors.fill: parent
@@ -162,12 +191,23 @@ Item {
       color: Qt.tint(Color.background, Qt.alpha(Color.foreground, 0.04))
 
       // Until a frame arrives, and for windows Hyprland does not render (a
-      // scrolling layout parks them beside the screen), the app's own face.
+      // scrolling layout parks them beside the screen), the last frame seen,
+      // or else the app's own face.
+      Image {
+        anchors.fill: parent
+        visible: card.showsSnapshot
+        source: card.snapshot ? card.snapshot.url : ""
+        fillMode: Image.PreserveAspectCrop
+        cache: false
+        smooth: true
+        mipmap: true
+      }
+
       Column {
         anchors.centerIn: parent
         width: parent.width - 20 * card.unit
         spacing: 8 * card.unit
-        visible: !capture.hasContent
+        visible: !capture.hasContent && !card.showsSnapshot
 
         AppIcon {
           anchors.horizontalCenter: parent.horizontalCenter
@@ -186,6 +226,18 @@ Item {
           font.pixelSize: Math.max(10, Math.min(13 * card.textUnit, frame.height * 0.05))
           text: card.entry ? card.entry.appName : ""
         }
+
+        Text {
+          width: parent.width
+          horizontalAlignment: Text.AlignHCenter
+          elide: Text.ElideRight
+          visible: card.parked && frame.height > 130 * card.unit
+          color: Color.muted
+          opacity: 0.75
+          font.family: Style.font.family
+          font.pixelSize: Math.max(9, Math.min(11 * card.textUnit, frame.height * 0.042))
+          text: "off screen \u00b7 no live preview"
+        }
       }
 
       ScreencopyView {
@@ -203,6 +255,35 @@ Item {
         color: Color.background
         opacity: card.fog
         visible: opacity > 0.005
+      }
+
+      // A still frame says so, and how old it is.
+      Rectangle {
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.margins: 8 * card.unit * card.depthScale + 2
+        visible: card.showsSnapshot && frame.height > 70 * card.unit
+        width: badgeText.implicitWidth + 14 * card.unit
+        height: badgeText.implicitHeight + 6 * card.unit
+        radius: height / 2
+        color: Qt.alpha(Color.background, 0.82)
+        border.width: 1
+        border.color: Qt.alpha(Color.foreground, 0.16)
+
+        Text {
+          id: badgeText
+
+          anchors.centerIn: parent
+          color: Color.muted
+          font.family: Style.font.family
+          font.pixelSize: Math.max(9, 11 * card.textUnit * Math.max(0.8, card.depthScale))
+          text: {
+            const snapshot = card.snapshot
+            if (!snapshot || !card.controller) return ""
+            const seconds = Math.max(0, (card.controller.openedAtMs - snapshot.takenAt) / 1000)
+            return "last seen " + Field.ageLabel(seconds, false, false)
+          }
+        }
       }
     }
   }
