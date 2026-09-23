@@ -1,0 +1,130 @@
+#!/bin/bash
+# The one way Fathom's tooling writes to a running Hyprland. It makes the
+# compositor run the installed hypr/fathom.lua, and checks Hyprland before and
+# after (docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md):
+#
+#   bash bin/load-bindings           load the bindings if Alt+Tab is not Fathom's
+#   bash bin/load-bindings --fresh   also pick up a changed snippet
+#   bash bin/load-bindings --check   report only, change nothing
+#
+# When ~/.config/hypr/bindings.lua loads Fathom (the persistent block in
+# README.md), a load is `hyprctl reload`: a fresh Lua state, the only way a
+# changed snippet takes effect. Otherwise the snippet is loaded for this
+# session with one `hyprctl eval`, and only while Hyprland does not have
+# Fathom's bindings yet; a changed snippet then needs the persistent block.
+#
+# Before any write it refuses a snippet without the load-once guard or with a
+# teardown call, and records Hyprland's PID. Afterwards it stops loudly if the
+# PID changed (Hyprland crashed and restarted), if `hyprctl configerrors`
+# reports anything, or if Alt+Tab is not Fathom's.
+
+set -euo pipefail
+
+readonly plugin_id="io.github.mtolhuys.fathom"
+readonly config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+readonly snippet="$config_home/omarchy/plugins/$plugin_id/hypr/fathom.lua"
+readonly bindings="$config_home/hypr/bindings.lua"
+readonly crash_doc="docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md"
+
+fail() {
+  printf 'load-bindings: %s\n' "$*" >&2
+  exit 1
+}
+
+mode=load
+case "${1:-}" in
+  "") ;;
+  --fresh) mode=fresh ;;
+  --check) mode=check ;;
+  *) fail "unknown option ${1} (use --fresh or --check)" ;;
+esac
+
+for command_name in hyprctl jq grep; do
+  command -v "$command_name" >/dev/null 2>&1 || fail "required command is missing: $command_name"
+done
+[[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] || fail "not inside a Hyprland session"
+
+hyprland_pid() {
+  hyprctl instances -j 2>/dev/null \
+    | jq -r --arg instance "$HYPRLAND_INSTANCE_SIGNATURE" '.[] | select(.instance == $instance) | .pid' \
+    | head -n 1
+}
+
+fathom_bound() {
+  hyprctl binds -j 2>/dev/null | jq -e 'any(.[]; .modmask == 8 and (.key | ascii_upcase) == "TAB"
+    and .submap == "" and .description == "Fathom: dive one window deeper")' >/dev/null
+}
+
+alt_tab_owner() {
+  hyprctl binds -j 2>/dev/null \
+    | jq -r '[.[] | select(.modmask == 8 and (.key | ascii_upcase) == "TAB" and .submap == "") | .description] | join(", ")'
+}
+
+persistent() {
+  [[ -f $bindings ]] && grep -q "$plugin_id/hypr/fathom.lua" "$bindings"
+}
+
+report() {
+  printf 'Alt+Tab: %s\n' "$(alt_tab_owner)"
+  if persistent; then
+    printf 'Loaded from: %s (persistent)\n' "$bindings"
+  else
+    printf 'Loaded from: this session only (no block in %s)\n' "$bindings"
+  fi
+}
+
+if [[ $mode == check ]]; then
+  report
+  fathom_bound
+  exit
+fi
+
+[[ -f $snippet ]] || fail "Fathom is not installed ($snippet); run bash bin/dev-sync"
+
+# The snippet itself must be safe to load (the same rules as tests/static.test.sh).
+first_code=$(grep -vE '^[[:space:]]*(--|$)' "$snippet" | head -n 1)
+[[ $first_code == 'if rawget(_G, "__fathom") then' ]] \
+  || fail "the installed snippet has no load-once guard; refusing to load it (see $crash_doc)"
+if grep -qE '(:(remove|unbind|set_enabled)|\.(remove|set_enabled))[[:space:]]*\(' "$snippet"; then
+  fail "the installed snippet tears down Hyprland objects; refusing to load it (see $crash_doc)"
+fi
+
+if fathom_bound && [[ $mode != fresh ]]; then
+  report
+  exit 0
+fi
+
+if ! persistent && fathom_bound; then
+  report
+  printf 'The running snippet is loaded for this session only. A changed snippet takes\n'
+  printf 'effect with the persistent block in %s (README.md, "Install").\n' "$bindings"
+  exit 0
+fi
+
+before=$(hyprland_pid)
+[[ -n $before ]] || fail "could not read Hyprland's PID; not touching it"
+
+if persistent; then
+  printf 'Reloading Hyprland'\''s config (a fresh Lua state loads %s)...\n' "$snippet"
+  hyprctl reload >/dev/null
+else
+  printf 'Loading %s for this session...\n' "$snippet"
+  hyprctl eval "dofile(\"$snippet\")" >/dev/null
+fi
+
+sleep 0.5
+after=$(hyprland_pid)
+if [[ $after != "$before" ]]; then
+  fail "Hyprland's PID changed ($before -> ${after:-none}): it crashed or restarted.
+Stop all live work. Inspect the core with coredumpctl before running anything
+again, and read $crash_doc."
+fi
+
+errors=$(hyprctl configerrors 2>/dev/null | tr -d '[:space:]')
+[[ -z $errors ]] || fail "hyprctl configerrors reports errors:
+$(hyprctl configerrors)"
+
+fathom_bound || fail "Hyprland is still running (PID $after), but Alt+Tab is not Fathom's: $(alt_tab_owner)"
+
+report
+printf 'Hyprland PID %s unchanged, no configuration errors.\n' "$after"

@@ -8,6 +8,30 @@ Fathom is a depth-based Alt-Tab overlay plugin for Omarchy Quattro. Read
 > in one compositor session. Before live binding work, read
 > [`docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md`](docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md).
 
+## Never crash the compositor
+
+Fathom runs inside Maarten's working session. These hold without exception:
+
+- `hypr/fathom.lua` starts with its load-once guard, keeps no Hyprland object
+  (keybind, hook, rule) in Lua, and never tears one down (`:remove()`,
+  `:unbind()`, `:set_enabled()`). `tests/static.test.sh` and the Lua tests
+  (whose mock records every teardown, even one a `pcall` would swallow) fail
+  otherwise.
+- `bin/load-bindings` is the only thing that writes to the running Hyprland:
+  no raw `hyprctl eval`, `reload`, `dispatch`, `keyword` or `plugin`, by hand,
+  by an agent or in another script (`tests/static.test.sh` holds the scripts
+  to it; a local agent hook blocks the commands). It refuses an unsafe
+  snippet, records Hyprland's PID before and after, and stops at once when it
+  changed.
+- Never experiment with Hyprland's Lua API (or any compositor behavior not
+  already verified) on the desktop. That belongs in the omakit lab, a
+  disposable Omarchy guest with the same Hyprland.
+- On any unexpected compositor exit: stop, inspect the core, write it down.
+  Never repeat the triggering command to see if it happens again.
+- Live checks on the desktop are limited to Fathom's own IPC (`state`,
+  `captures`, `open`/`cancel`, `bench`), with Maarten's go, and with the
+  Hyprland PID compared before and after.
+
 ## Invariants
 
 - v1 is an overlay only. Never move, resize or close a real window. The focus

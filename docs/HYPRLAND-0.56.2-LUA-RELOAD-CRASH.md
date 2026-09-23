@@ -94,3 +94,31 @@ restore it with `omarchy restart shell` before continuing live verification.
    unchanged afterward.
 5. On an unexpected compositor exit, stop live testing and inspect the core;
    do not immediately repeat the triggering command.
+
+## Guardrails added afterwards
+
+So that no change, person or agent can bring this back:
+
+- `hypr/fathom.lua` keeps no Hyprland object in Lua at all (not the keybinds,
+  the key hook or the layer rule), so a later load has nothing it could tear
+  down, even by mistake.
+- `tests/static.test.sh` fails when the snippet does not start with the
+  load-once guard, calls a teardown method (`:remove()`, `:unbind()`,
+  `:set_enabled()`), or keeps the result of an `hl.*` constructor; and when any
+  script other than `bin/load-bindings` writes to Hyprland.
+- The Lua tests' mock records every teardown call before it errors, so a
+  teardown inside a `pcall` (exactly the old reload path) still fails the
+  test; a second load must make no call into Hyprland at all. Run against the
+  snippet from `d19a3ef`, three checks fail and one names `remove()`.
+- `bin/load-bindings` is the only way to (re)load the snippet: it refuses an
+  unsafe snippet, loads it at most once per Lua state (a persistent setup is
+  reloaded with `hyprctl reload`, a fresh state), records Hyprland's PID and
+  stops loudly when it changed, and checks `configerrors` and that Alt+Tab is
+  Fathom's. `bin/dev-sync` calls it.
+- A local Claude Code hook in Fathom's checkout blocks raw `hyprctl eval`,
+  `reload`, `dispatch`, `keyword` and `plugin` commands, so an agent cannot
+  bypass `bin/load-bindings`.
+- `DEVELOPMENT.md` ("Never crash the compositor") makes these rules part of
+  the contract, and moves experiments with Hyprland's Lua API to the omakit
+  lab.
+

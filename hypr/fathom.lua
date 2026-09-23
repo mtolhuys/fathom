@@ -1,17 +1,18 @@
 -- Fathom keybindings for Hyprland 0.56 or newer, configured in Lua.
 --
--- Persistent: add this line to ~/.config/hypr/bindings.lua, then `hyprctl reload`:
+-- Load it from ~/.config/hypr/bindings.lua (README.md shows a block that also
+-- falls back to another switcher while Fathom is not installed), or for the
+-- current session only with `bash bin/load-bindings` from Fathom's checkout.
+-- Do not load it with a raw `hyprctl eval`: bin/load-bindings is the one way
+-- that checks Hyprland before and after.
 --
---   dofile(os.getenv("HOME") .. "/.config/omarchy/plugins/io.github.mtolhuys.fathom/hypr/fathom.lua")
---
--- Temporary, until the next reload (handy while developing):
---
---   hyprctl eval 'dofile(os.getenv("HOME") .. "/Projects/plugins/fathom/hypr/fathom.lua")'
---
--- Loading it twice in one Lua state does nothing the second time: tearing a
--- keybind or an event hook down from Lua crashed Hyprland 0.56.2 (SIGABRT
--- inside its Lua API). To pick up a change, run `hyprctl reload`, which starts
--- a fresh Lua state.
+-- Loading it twice in one Lua state does nothing the second time. Never
+-- tear down what a load set up: removing a keybind from Lua crashed Hyprland
+-- 0.56.2 (docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md), and a pcall cannot catch
+-- a crash in the compositor. This file keeps no Hyprland object (keybind,
+-- hook, rule) in Lua at all, so there is nothing to tear down. To pick up a
+-- change, start a fresh Lua state: `hyprctl reload` (bin/load-bindings does it
+-- with checks before and after).
 
 if rawget(_G, "__fathom") then
   return
@@ -19,12 +20,6 @@ end
 
 local fathom = {}
 _G.__fathom = fathom
-fathom.binds = {}
-
-local function remember(bind)
-  table.insert(fathom.binds, bind)
-  return bind
-end
 
 local function send(name)
   hl.dispatch(hl.dsp.global("fathom:" .. name))
@@ -42,8 +37,8 @@ local function chord(name)
 end
 
 local function bind_chords()
-  remember(hl.bind("ALT + TAB", chord("next"), { description = "Fathom: dive one window deeper", repeating = true }))
-  remember(hl.bind("ALT + SHIFT + TAB", chord("previous"), { description = "Fathom: rise one window", repeating = true }))
+  hl.bind("ALT + TAB", chord("next"), { description = "Fathom: dive one window deeper", repeating = true })
+  hl.bind("ALT + SHIFT + TAB", chord("previous"), { description = "Fathom: rise one window", repeating = true })
 end
 
 -- Releasing Alt commits the selection. A release bind on a bare modifier only
@@ -56,7 +51,7 @@ end
 -- before anything that could fail.
 local FATHOM_ALT_KEYCODES = { [64] = true, [108] = true }
 
-fathom.hook = hl.on("input.keyboard.key", function(keycode, _, state)
+hl.on("input.keyboard.key", function(keycode, _, state)
   if state == 0 and FATHOM_ALT_KEYCODES[keycode] and hl.get_current_submap() == "fathom" then
     hl.dispatch(hl.dsp.submap("reset"))
     send("release")
@@ -76,7 +71,7 @@ fathom.submap = pcall(hl.define_submap, "fathom", bind_chords)
 
 -- Show the field at once instead of fading the layer in, and frost what is
 -- behind it.
-fathom.layer_rule = hl.layer_rule({
+hl.layer_rule({
   name = "fathom",
   match = { namespace = "^fathom$" },
   no_anim = true,

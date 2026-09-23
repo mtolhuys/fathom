@@ -6,20 +6,33 @@
 
 local path = arg[1] or "hypr/fathom.lua"
 
-local state = { submap = "", binds = {}, hooks = {}, unbind = {}, dispatch = {}, layer_rule = {} }
+local state = { submap = "", binds = {}, hooks = {}, unbind = {}, dispatch = {}, layer_rule = {}, calls = 0 }
 
-local function removable(list, item)
-  item.active = true
-  item.remove = function(self)
-    self.active = false
+-- Hyprland 0.56.2 crashes (SIGSEGV in keybindRemove) when Lua removes a
+-- keybind it created earlier; see docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md.
+-- Every object the mock hands out refuses teardown the same hard way, so a
+-- snippet that ever tries it fails here instead of on a desktop.
+local function crashes(what)
+  return function()
+    -- Recorded first: a pcall in the snippet may swallow the error, but a
+    -- real crash is never swallowed.
+    state.teardown = what
+    error(what .. " would crash Hyprland 0.56.2 (docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md)", 2)
   end
+end
+
+local function object(list, item)
+  item.active = true
+  item.remove = crashes("remove()")
+  item.unbind = crashes("unbind()")
+  item.set_enabled = crashes("set_enabled()")
   table.insert(list, item)
   return item
 end
 
 local defining = nil
 
-hl = {
+local api = {
   dsp = {
     global = function(name) return { kind = "global", name = name } end,
     submap = function(name) return { kind = "submap", name = name } end,
@@ -31,7 +44,7 @@ hl = {
     end
   end,
   bind = function(keys, dispatcher, options)
-    return removable(state.binds, { keys = keys, dispatcher = dispatcher, options = options or {}, submap = defining or "" })
+    return object(state.binds, { keys = keys, dispatcher = dispatcher, options = options or {}, submap = defining or "" })
   end,
   define_submap = function(name, body)
     defining = name
@@ -40,17 +53,37 @@ hl = {
   end,
   get_current_submap = function() return state.submap end,
   on = function(event, handler)
-    return removable(state.hooks, { event = event, handler = handler })
+    return object(state.hooks, { event = event, handler = handler })
   end,
   dispatch = function(dispatcher)
     table.insert(state.dispatch, dispatcher)
     if dispatcher.kind == "submap" then state.submap = dispatcher.name == "reset" and "" or dispatcher.name end
   end,
   layer_rule = function(rule)
-    table.insert(state.layer_rule, rule)
-    return rule
+    return object(state.layer_rule, rule)
   end,
 }
+
+-- `hl` counts every call the snippet makes, so a second load can be held to
+-- making none at all.
+local function counted(table_)
+  return setmetatable({}, {
+    __index = function(_, key)
+      local value = table_[key]
+      if type(value) == "function" then
+        return function(...)
+          state.calls = state.calls + 1
+          return value(...)
+        end
+      elseif type(value) == "table" then
+        return counted(value)
+      end
+      return value
+    end,
+    __newindex = function(_, key, value) table_[key] = value end,
+  })
+end
+hl = counted(api)
 
 local failures = 0
 local function check(condition, message)
@@ -138,21 +171,24 @@ check(#state.layer_rule == 1 and state.layer_rule[1].match.namespace == "^fathom
   and state.layer_rule[1].no_anim == true and state.layer_rule[1].blur == true,
   "the fathom layer shows at once, over a blurred background")
 
--- Loading the file a second time in the same Lua state does nothing: no
--- keybind or hook is torn down (that crashed Hyprland 0.56.2) or added twice.
-local binds_before, hooks_before, rules_before = #state.binds, #state.hooks, #state.layer_rule
+-- Loading the file a second time in the same Lua state does nothing: not one
+-- call into Hyprland, so nothing is torn down (that crashed Hyprland 0.56.2)
+-- or added twice.
+local calls_before = state.calls
 dofile(path)
-local removed = 0
-for _, item in ipairs(state.binds) do if not item.active then removed = removed + 1 end end
-for _, item in ipairs(state.hooks) do if not item.active then removed = removed + 1 end end
-check(#state.binds == binds_before and #state.hooks == hooks_before and #state.layer_rule == rules_before
-  and removed == 0, "a second load in the same Lua state changes nothing")
+check(state.calls == calls_before, "a second load in the same Lua state makes no call into Hyprland")
+check(rawget(_G, "__fathom") ~= nil and next(_G.__fathom) ~= nil and _G.__fathom.submap ~= nil
+  and _G.__fathom.hook == nil and _G.__fathom.binds == nil and _G.__fathom.layer_rule == nil,
+  "the snippet keeps no Hyprland object that a later load could tear down")
+
+check(state.teardown == nil, "no load ever tears down a Hyprland object"
+  .. (state.teardown and " (it called " .. state.teardown .. ")" or ""))
 
 -- A fresh Lua state (hyprctl reload) loads it again; a submap Hyprland refuses
 -- to define leaves Alt+Tab working without one.
 _G.__fathom = nil
-state = { submap = "", binds = {}, hooks = {}, unbind = {}, dispatch = {}, layer_rule = {} }
-hl.define_submap = function() error("cannot define") end
+state = { submap = "", binds = {}, hooks = {}, unbind = {}, dispatch = {}, layer_rule = {}, calls = 0 }
+api.define_submap = function() error("cannot define") end
 dofile(path)
 press("ALT + TAB")
 check(sent({ "fathom:next" }) and state.submap == "", "without a submap Alt+Tab still opens and holds no submap")

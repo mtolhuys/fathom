@@ -5,8 +5,10 @@
 #
 # Writes only to ~/.cache/fathom, the plugin's own directory under
 # ~/.config/omarchy/plugins, and (through `omarchy plugin enable`) the plugin's
-# entry in ~/.config/omarchy/shell.json. It does not touch the Hyprland config;
-# the keybindings are loaded separately (see README.md).
+# entry in ~/.config/omarchy/shell.json. It never edits the Hyprland config.
+# When the installed hypr/fathom.lua changed, or Alt+Tab is not Fathom's yet,
+# it hands over to bin/load-bindings, the one script that writes to the
+# running Hyprland, with checks before and after.
 
 set -euo pipefail
 
@@ -80,6 +82,10 @@ if ! git -C "$snapshot_dir" rev-parse --verify HEAD >/dev/null 2>&1 \
 fi
 snapshot_commit=$(git -C "$snapshot_dir" rev-parse HEAD)
 
+snippet_before=""
+[[ -f $installed_dir/hypr/fathom.lua ]] && snippet_before=$(sha256sum "$installed_dir/hypr/fathom.lua")
+snippet_before=${snippet_before%% *}
+
 if [[ -e $installed_dir || -L $installed_dir ]]; then
   printf 'Replacing the installed development copy...\n'
   omarchy plugin remove "$plugin_id" --yes
@@ -108,5 +114,11 @@ done
 [[ $loaded == true ]] || fail "installed and enabled, but build $expected_identity did not answer on IPC"
 
 printf 'Fathom %s is installed, enabled and loaded.\n' "$expected_identity"
-printf 'Load the keybindings for this session with:\n'
-printf "  hyprctl eval 'dofile(\"%s/hypr/fathom.lua\")'\n" "$installed_dir"
+
+snippet_after=$(sha256sum "$installed_dir/hypr/fathom.lua")
+snippet_after=${snippet_after%% *}
+if [[ $snippet_after != "$snippet_before" ]]; then
+  bash "$project_root/bin/load-bindings" --fresh
+else
+  bash "$project_root/bin/load-bindings"
+fi
