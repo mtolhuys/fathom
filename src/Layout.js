@@ -156,6 +156,31 @@ function gridRect(position, count, boxWidth, boxHeight, gap) {
     return { x: g + column * (width + g), y: g + row * (height + g), width: Math.max(1, width), height: Math.max(1, height) };
 }
 
+function sameRect(a, b) {
+    return Math.abs(a.x - b.x) < 2 && Math.abs(a.y - b.y) < 2
+        && Math.abs(a.width - b.width) < 2 && Math.abs(a.height - b.height) < 2;
+}
+
+// Windows sharing a rectangle (the tabs of a Hyprland group) split it side
+// by side, in list order. `rects` are the mapped rectangles, `known` the
+// compositor geometries they came from; `rects` is changed in place.
+function splitSharedRects(rects, known) {
+    var done = [];
+    for (var a = 0; a < rects.length; a++) {
+        if (done[a]) continue;
+        var same = [a];
+        for (var b = a + 1; b < rects.length; b++) {
+            if (!done[b] && sameRect(known[a], known[b])) same.push(b);
+        }
+        var base = rects[a];
+        var part = base.width / same.length;
+        for (var k = 0; k < same.length; k++) {
+            rects[same[k]] = { x: base.x + k * part, y: base.y, width: part, height: base.height };
+            done[same[k]] = true;
+        }
+    }
+}
+
 // Rectangles for one workspace's windows inside a minimap box. `windows` is a
 // list of geometries (null when unknown). Windows sharing a rectangle (the
 // tabs of a Hyprland group) split it side by side, so each one can be seen
@@ -178,26 +203,7 @@ function minimapItems(viewport, windows, boxWidth, boxHeight) {
     var bounds = minimapBounds(viewport, known);
     for (var j = 0; j < known.length; j++) rects.push(mapRect(known[j], bounds, boxWidth, boxHeight));
 
-    // Split shared rectangles into side-by-side tabs, in list order.
-    var done = [];
-    for (var a = 0; a < rects.length; a++) {
-        if (done[a]) continue;
-        var same = [a];
-        for (var b = a + 1; b < rects.length; b++) {
-            if (!done[b] && Math.abs(known[a].x - known[b].x) < 2 && Math.abs(known[a].y - known[b].y) < 2
-                    && Math.abs(known[a].width - known[b].width) < 2 && Math.abs(known[a].height - known[b].height) < 2)
-                same.push(b);
-        }
-        if (same.length > 1) {
-            var base = rects[a];
-            var part = base.width / same.length;
-            for (var k = 0; k < same.length; k++) {
-                rects[same[k]] = { x: base.x + k * part, y: base.y, width: part, height: base.height };
-                done[same[k]] = true;
-            }
-        }
-        done[a] = true;
-    }
+    splitSharedRects(rects, known);
     return { rects: rects, viewport: mapRect(viewport, bounds, boxWidth, boxHeight), bounds: bounds };
 }
 

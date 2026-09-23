@@ -351,6 +351,18 @@ test('left and right step between workspaces, digits jump to one', () => {
   assert.equal(Field.workspaceByNumber(groups, order, 9), -1);
 });
 
+test('a key types one printable character, or none', () => {
+  assert.equal(Field.typedCharacter(0x42, false, 'b'), 'b');
+  assert.equal(Field.typedCharacter(0x42, false, ''), 'b', 'Alt+B without text');
+  assert.equal(Field.typedCharacter(0x42, true, ''), 'B');
+  assert.equal(Field.typedCharacter(0x37, false, ''), '7');
+  assert.equal(Field.typedCharacter(0x20, false, ' '), ' ');
+  assert.equal(Field.typedCharacter(0x01000003, false, '\b'), '', 'Backspace types nothing');
+  assert.equal(Field.typedCharacter(0x01000000, false, '\u001b'), '', 'Escape types nothing');
+  assert.equal(Field.typedCharacter(0x01000020, false, ''), '', 'Shift alone types nothing');
+  assert.equal(Field.typedCharacter(0, false, '\u007f'), '');
+});
+
 test('a wheel notch is one window, touchpad pixels add up', () => {
   assert.deepEqual(Object.assign({}, Field.wheelSteps(0, -120, 0)), { steps: 1, rest: 0 });
   assert.deepEqual(Object.assign({}, Field.wheelSteps(0, 240, 0)), { steps: -2, rest: 0 });

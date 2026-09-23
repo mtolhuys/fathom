@@ -37,11 +37,11 @@ Item {
 
   // Read by the shell (isPluginOpen) as well as by the view.
   property bool opened: false
-  // Whether the field is drawn. In hold mode it appears after revealDelay,
-  // so a quick Alt+Tab switches without flashing the overlay; the surface
+  // Whether the field is drawn. In hold mode it appears after 90 ms
+  // (revealTimer), so a quick Alt+Tab switches without flashing the overlay;
+  // the surface
   // (and its keyboard grab) exists from the first moment either way.
   property bool revealed: false
-  readonly property int revealDelay: 90
   // "hold": opened by the Alt+Tab chord, releasing Alt commits.
   // "browse": opened by IPC or summon without a step, or kept open with
   // Space; Enter or a click commits.
@@ -58,7 +58,6 @@ Item {
   property var groups: []
   property var monitorInfo: ({})
   property int selectedIndex: -1
-  property int hoveredIndex: -1
   // The camera sits on the selection's slot and animates between slots.
   property real cameraSlot: 0
   property bool cameraAnimated: false
@@ -290,6 +289,12 @@ Item {
     }
   }
 
+  // Every window as it stands now, front to back.
+  function currentField(now) {
+    const fallbackActive = Hyprland.activeToplevel ? Hyprland.activeToplevel.address : ""
+    return Recency.buildField(root.collectCandidates(), recency.recencyState, now, fallbackActive)
+  }
+
   function openField(nextMode, step) {
     if (root.opened) {
       if (step) root.step(step)
@@ -305,18 +310,20 @@ Item {
     recency.seedFromToplevels()
 
     const now = Date.now()
-    const fallbackActive = Hyprland.activeToplevel ? Hyprland.activeToplevel.address : ""
-    const entries = Recency.buildField(root.collectCandidates(), recency.recencyState, now, fallbackActive)
+    const entries = root.currentField(now)
     // Holding Alt+Tab with a single window has nowhere to go.
     if (entries.length < (nextMode === "hold" ? 2 : 1)) return false
+    root.showField(entries, nextMode, step, now)
+    return true
+  }
 
+  function showField(entries, nextMode, step, now) {
     root.cameraAnimated = false
     root.targetScreen = root.screenForFocusedMonitor()
     root.mode = nextMode
     root.pinned = false
     root.filterText = ""
     root.closed = ({})
-    root.hoveredIndex = -1
     root.wheelCarryX = 0
     root.wheelCarryY = 0
     root.field = entries
@@ -337,7 +344,6 @@ Item {
       root.cameraAnimated = true
       surface.view.focusKeys()
     })
-    return true
   }
 
   // Tab and Shift+Tab: one window deeper or shallower, wrapping at the ends.
@@ -460,11 +466,8 @@ Item {
       return true
     }
     if (control) return false
-    let typed = String(text || "")
-    // Alt+letter may arrive without text; fall back to the key itself.
-    if (!typed && key >= Qt.Key_A && key <= Qt.Key_Z) typed = String.fromCharCode(key - Qt.Key_A + (shift ? 65 : 97))
-    if (!typed && key >= Qt.Key_0 && key <= Qt.Key_9) typed = String.fromCharCode(key - Qt.Key_0 + 48)
-    if (typed.length !== 1 || typed < " " || typed === "\u007f") return false
+    const typed = Field.typedCharacter(key, shift, text)
+    if (!typed) return false
     // Digits pick a workspace until a filter is being typed.
     if (!root.filterText && typed >= "1" && typed <= "9") {
       root.workspaceJump(Number(typed))
@@ -519,7 +522,6 @@ Item {
     root.closed = ({})
     root.filterText = ""
     root.selectedIndex = -1
-    root.hoveredIndex = -1
     // Keep the shell's open-state bookkeeping in step when Fathom closes itself.
     // hide() calls close() below, which is a no-op by now.
     if (root.shell && typeof root.shell.hide === "function") root.shell.hide(root.pluginId)
@@ -573,11 +575,7 @@ Item {
   }
 
   function fieldJson() {
-    const now = Date.now()
-    const fallbackActive = Hyprland.activeToplevel ? Hyprland.activeToplevel.address : ""
-    const entries = root.opened
-      ? root.field
-      : Recency.buildField(root.collectCandidates(), recency.recencyState, now, fallbackActive)
+    const entries = root.opened ? root.field : root.currentField(Date.now())
     const rows = []
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i]
@@ -659,7 +657,7 @@ Item {
   Timer {
     id: revealTimer
 
-    interval: root.revealDelay
+    interval: 90
     onTriggered: if (root.opened) root.revealed = true
   }
 

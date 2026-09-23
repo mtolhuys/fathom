@@ -274,6 +274,19 @@ function workspaceByNumber(groups, order, number) {
     return -1;
 }
 
+// ------------------------------------------------------------ keys
+
+// The one printable character a key press types, or "". Alt+letter can
+// arrive with no text at all; the key code (Qt.Key_A..Z, Qt.Key_0..9, which
+// are their ASCII codes) stands in for it.
+function typedCharacter(key, shift, text) {
+    var typed = String(text || "");
+    if (!typed && key >= 0x41 && key <= 0x5a) typed = String.fromCharCode(shift ? key : key + 32);
+    if (!typed && key >= 0x30 && key <= 0x39) typed = String.fromCharCode(key);
+    if (typed.length !== 1 || typed < " " || typed === "\u007f") return "";
+    return typed;
+}
+
 // ------------------------------------------------------------ wheel
 
 // Wheel input: mice report 120 per notch (angleDelta), touchpads report
