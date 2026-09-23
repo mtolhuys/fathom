@@ -131,7 +131,7 @@ Item {
 
     const now = Date.now()
     const fallbackActive = Hyprland.activeToplevel ? Hyprland.activeToplevel.address : ""
-    const entries = Recency.buildField(root.collectCandidates(), recency.state, now, fallbackActive)
+    const entries = Recency.buildField(root.collectCandidates(), recency.recencyState, now, fallbackActive)
     // Holding Alt+Tab with a single window has nowhere to go.
     if (entries.length < (nextMode === "hold" ? 2 : 1)) return false
 
@@ -279,7 +279,7 @@ Item {
     const fallbackActive = Hyprland.activeToplevel ? Hyprland.activeToplevel.address : ""
     const entries = root.opened
       ? root.field
-      : Recency.buildField(root.collectCandidates(), recency.state, now, fallbackActive)
+      : Recency.buildField(root.collectCandidates(), recency.recencyState, now, fallbackActive)
     const rows = []
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i]

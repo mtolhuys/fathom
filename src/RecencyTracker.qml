@@ -15,18 +15,18 @@ import "Recency.js" as Recency
 Item {
   id: tracker
 
-  property var state: Recency.createState()
+  property var recencyState: Recency.createState()
   // True once at least one window was seeded from its focusHistoryID.
   property bool seeded: false
   // Bumped on every change; the state object itself is mutated in place.
   property int revision: 0
 
   function secondsSince(address, nowMs, fallbackActive) {
-    return Recency.secondsSince(tracker.state, address, nowMs, fallbackActive)
+    return Recency.secondsSince(tracker.recencyState, address, nowMs, fallbackActive)
   }
 
   function trackedCount() {
-    return Object.keys(tracker.state.lastActive).length
+    return Object.keys(tracker.recencyState.lastActive).length
   }
 
   // Seeds every window the map does not know yet from the focusHistoryID in
@@ -41,7 +41,7 @@ Item {
       if (!ipc || ipc.focusHistoryID === undefined) continue
       clients.push({ address: toplevel.address, focusHistoryID: ipc.focusHistoryID })
     }
-    const count = Recency.seedFromClients(tracker.state, clients, Date.now())
+    const count = Recency.seedFromClients(tracker.recencyState, clients, Date.now())
     if (clients.length > 0) tracker.seeded = true
     if (count > 0) tracker.revision++
     return count
@@ -77,9 +77,9 @@ Item {
       let changed = false
       // activewindowv2 carries the address; plain activewindow only has
       // class and title.
-      if (name === "activewindowv2") changed = Recency.recordFocus(tracker.state, event.data, Date.now())
-      else if (name === "openwindow") changed = Recency.recordOpen(tracker.state, event.data, Date.now())
-      else if (name === "closewindow") changed = Recency.recordClose(tracker.state, event.data)
+      if (name === "activewindowv2") changed = Recency.recordFocus(tracker.recencyState, event.data, Date.now())
+      else if (name === "openwindow") changed = Recency.recordOpen(tracker.recencyState, event.data, Date.now())
+      else if (name === "closewindow") changed = Recency.recordClose(tracker.recencyState, event.data)
       if (changed) tracker.revision++
     }
   }
