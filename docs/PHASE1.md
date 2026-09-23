@@ -115,7 +115,7 @@ on 2026-09-23 (Omarchy 4.0.4, Hyprland 0.56.2, Quickshell 0.3.1).
   of `dofile`) crashed Hyprland 0.56.2 (SIGABRT inside its Lua API, called
   from a `pcall` while the reload removed the first load's keybinds and hook
   and redefined the submap); Hyprland's watchdog restarted it in safe mode.
-  The mocked `hl` of the Lua tests could not show it. Since `<fix>`, a second
+  The mocked `hl` of the Lua tests could not show it. Since `8f67bae`, a second
   load in one Lua state does nothing and changes need `hyprctl reload`.
   Which of the three calls crashes is not known without Hyprland's symbols.
 
