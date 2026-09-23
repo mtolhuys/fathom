@@ -3,33 +3,58 @@
 A depth-based Alt-Tab for [Omarchy](https://omarchy.org/) Quattro.
 
 Windows are placed on a z-axis by how long ago you last used them. The window
-you used most recently is in front, sharp and large; older windows recede,
-smaller and dimmer. Hold `Alt`, dive with `Tab`, release `Alt` to focus the
-window in front.
+you used most recently is in front; older ones recede into the distance and
+the fog. Hold `Alt`, dive with `Tab`, the arrows or the wheel, release `Alt` to
+focus the window in front. Below the stack, a map shows every workspace with
+its windows where they really are.
 
 Fathom is an overlay only: it never moves, resizes or closes a window. Focusing
 the one you pick is the only thing it asks the compositor to do.
 
-> Status: Phase 0 (0.1.0, unreleased). Live thumbnails, depth applied to scale
-> and opacity, Tab and Shift+Tab, focus on release. Blur, fog, parallax, the
-> perspective layout and scroll dive come in Phase 1. See
-> [docs/SPEC.md](docs/SPEC.md) and [docs/PHASE0.md](docs/PHASE0.md).
+> Status: 0.2.0 (unreleased). See [docs/SPEC.md](docs/SPEC.md),
+> [docs/PHASE0.md](docs/PHASE0.md) and [docs/PHASE1.md](docs/PHASE1.md).
+
+## What you see
+
+- **The Deep.** The window you are about to switch to is a large live card in
+  front. Every window behind it is a card too, stepping back up and to the
+  right, each with its app icon, title and how long ago you used it. Older
+  windows sink into the fog.
+- **The map.** A card per workspace (scratchpads included) with a minimap of
+  its windows at their real positions, each with its app icon. You see which
+  workspace is on screen, which window is focused, which one wants your
+  attention, and what a scrolling layout has parked beside the screen.
+- **The caption.** The selection's title, app, workspace and age.
 
 ## Keys
 
+Hold `Alt` while you use these; release `Alt` to focus the selection.
+
 | Keys | Action |
 | --- | --- |
-| `Alt`+`Tab` | Open the field on the window you used before this one |
-| `Tab` again, `Alt` held | Dive one window deeper |
-| `Alt`+`Shift`+`Tab` | Open at the far end, or rise one window |
-| Release `Alt` | Focus the window in front |
-| `Escape` | Close without focusing |
-| `Enter` or a click on a window | Focus that window |
+| `Alt`+`Tab` | Open on the window you used before this one |
+| `Tab` / `Shift`+`Tab` | One window deeper / shallower (wraps) |
+| `↓` / `↑`, wheel | One window deeper / shallower |
+| `→` / `←`, sideways wheel | The most recent window of the next / previous workspace |
+| `1` to `9` | The most recent window on that workspace |
+| `Home` / `End`, `PageDown` / `PageUp` | Front / back, five windows |
+| Type letters | Filter by app, title or workspace |
+| `Space` | Keep the field open after you release `Alt` |
+| `Enter`, a click on a window or the caption | Focus it |
+| `Escape` | Clear the filter, or close without focusing |
 | Click on empty space | Close without focusing |
+
+A quick `Alt`+`Tab` switches back without drawing the overlay at all.
+
+While you hold `Alt` after `Alt`+`Tab`, Fathom's bindings put Hyprland in a
+`fathom` submap, so your own `Alt` shortcuts (Omarchy's `Alt`+`←` text
+navigation, another switcher's `Alt`+`↑`) do not get in the way. They are back
+the moment you release `Alt`.
 
 Depth follows `log2(1 + seconds since focus / 30)`, clamped to 8: a window you
 left 30 seconds ago is one unit deep, two minutes ago about 2.3, an hour ago
-about 7.
+about 7. Right after the shell starts, Fathom knows the order of your windows
+but not when you used them; those say "earlier" until you switch.
 
 ## Requirements
 
@@ -59,22 +84,24 @@ dofile(os.getenv("HOME") .. "/.config/omarchy/plugins/io.github.mtolhuys.fathom/
 ```
 
 The snippet unbinds Omarchy's default `Alt`+`Tab` chords, binds them to
-Fathom, and adds a raw key hook that reports the `Alt` release. Load it after
-any other Alt-Tab plugin's bindings, or instead of them.
+Fathom, adds a raw key hook that reports the `Alt` release, and frosts the
+background behind the overlay. Load it after any other Alt-Tab plugin's
+bindings, or instead of them. Loading it again replaces the previous load.
 
 Without the Lua snippet, any Hyprland bind can drive Fathom through IPC:
-`omarchy-shell fathom hold 1` behaves like `Alt`+`Tab`, and
-`omarchy-shell fathom release` like releasing `Alt`.
+`omarchy-shell fathom hold 1` behaves like `Alt`+`Tab`,
+`omarchy-shell fathom release` like releasing `Alt`, and
+`omarchy-shell fathom open` opens the overview to browse with the keyboard.
 
 ## IPC
 
 ```bash
-omarchy-shell fathom state      # build identity, open state, tracked windows
-omarchy-shell fathom field      # every window with seconds, depth, scale, opacity
 omarchy-shell fathom open       # open for browsing (Enter or click to focus)
+omarchy-shell fathom state      # build identity, open state, counts, filter
+omarchy-shell fathom field      # every window with app, workspace, age, depth, fog
 omarchy-shell fathom bench 10   # dive through the field for 10 s with the frame probe on
 omarchy-shell fathom stats      # frame times of the last bench
-omarchy-shell fathom captures   # which thumbnails received a frame, and whether their workspace is on screen
+omarchy-shell fathom captures   # which cards capture and which received a frame
 ```
 
 The full list is in [docs/SPEC.md](docs/SPEC.md#ipc).
@@ -91,12 +118,13 @@ omarchy plugin remove io.github.mtolhuys.fathom
 ## Development
 
 ```bash
-bash bin/test       # manifest, logic, Lua binding, offscreen QML tests, qmllint,
-                    # ShellCheck, and `omarchy plugin validate` when available
-bash bin/dev-sync   # install and enable the working tree in this session
+bash bin/test              # manifest, logic, Lua bindings, offscreen QML tests,
+                           # qmllint, ShellCheck, `omarchy plugin validate`
+bash tests/qml/render.sh   # render the field offscreen into screenshots-local/
+bash bin/dev-sync          # install and enable the working tree in this session
 ```
 
-The offscreen QML tests need the Qt 6 `qmltestrunner` (package
+The offscreen QML tests and renders need the Qt 6 `qmltestrunner` (package
 `qt6-declarative`). They run the real controller and view against stub
 Quickshell modules in `tests/qml/stubs`.
 
@@ -113,14 +141,14 @@ omakit weigh io.github.mtolhuys.fathom             # restarts the shell; asks fi
 Fathom starts no program and keeps no file of its own, so it carries neither
 of omakit's blocks; `DEVELOPMENT.md` says what happens if that ever changes.
 
-## Known limitations (Phase 0)
+## Known limitations
 
-- The layout is a simple vanishing-point placeholder, not the Phase 1
-  perspective layout.
-- A very quick `Alt`+`Tab` shows the overlay for a moment before switching.
-- The recency map starts over when the shell restarts; it is seeded from
-  Hyprland's focus order.
-- Special workspaces (scratchpads) are not included.
+- Windows opened while the field is open join the next switch.
+- A scrolling layout's windows parked beside the screen cannot be captured
+  (Hyprland does not render them); they show their app icon.
+- The recency map starts over when the shell restarts (Fathom writes no
+  files); it is seeded from Hyprland's focus order.
+- Mouse parallax is not built yet.
 
 ## License
 

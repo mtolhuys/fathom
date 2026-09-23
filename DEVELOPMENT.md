@@ -6,7 +6,10 @@ Fathom is a depth-based Alt-Tab overlay plugin for Omarchy Quattro. Read
 ## Invariants
 
 - v1 is an overlay only. Never move, resize or close a real window. The focus
-  request (and the group tab activation before it) is the only compositor write.
+  request (and the group tab activation before it) is the plugin's only
+  compositor write. The Lua snippet, which the user loads into their own
+  config, also switches Hyprland to the `fathom` submap while Alt is held and
+  back when it is released, and adds one layer rule.
 - No network, no daemon, no root. The plugin writes no files and starts no
   programs.
 - The exclusive keyboard grab exists only while the field is open, and every
@@ -25,11 +28,16 @@ Fathom is a depth-based Alt-Tab overlay plugin for Omarchy Quattro. Read
 
 ## Layout of the code
 
-- Pure logic lives in `src/*.js` (`.pragma library`). The node tests load the
-  exact same files, so keep them free of Quickshell.
+- Pure logic lives in `src/*.js` (`.pragma library`): `Recency.js` (focus
+  times), `Depth.js` (depth and fog), `Field.js` (filter, navigation,
+  workspaces, labels), `Layout.js` (the card stack and the map), `Focus.js`
+  (dispatch strings), `Stats.js`. The node tests load the exact same files,
+  so keep them free of Quickshell, and never start a line with `.`.
 - `src/FieldSurface.qml` is the only file that needs a real layer-shell window;
   the offscreen QML tests swap it for `tests/qml/FieldSurface.qml` and replace
   Quickshell with `tests/qml/stubs`. Keep everything else testable that way.
+- Look at a change before you ship it: `bash tests/qml/render.sh` renders the
+  field offscreen into `screenshots-local/` (git-ignored) at real screen sizes.
 
 ## Checks
 
@@ -76,5 +84,7 @@ The skills (`omarchy-plugin-build`, `-check`, `-weigh`, `-submit`,
 
 ## Phases
 
-Finish and report a phase before starting the next. Phase 0 stops when it
-works; blur, fog, parallax, the perspective layout and scroll dive are Phase 1.
+Finish and report a phase before starting the next. Phase 0 (0.1.0) proved the
+mechanics. Phase 1 (0.2.0, `docs/PHASE1.md`) is the card layout, the workspace
+map, fog, blur, the wheel, arrows and the filter; mouse parallax is the one
+Phase 1 item still open.

@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+Phase 1: the product.
+
+- Every window is a card of the monitor's shape with its icon, title and age;
+  the stack steps back evenly so every window stays readable. Age shows as fog
+  (the brief's `depth * 0.08`), no longer as shrinking and fading.
+- A map of every workspace, scratchpads included: a minimap per workspace with
+  its windows at their real positions and app icons, what is on screen, the
+  focused and urgent windows, and what a scrolling layout parks beside the
+  screen.
+- Arrows (up and down dive, left and right change workspace), Home, End,
+  PageUp, PageDown, digits for a workspace, type to filter, Space to keep the
+  field open, the wheel and the touchpad; clicks on cards, the caption and the
+  map.
+- The bindings hold a `fathom` submap while Alt is down, so the user's own Alt
+  chords do not swallow Fathom's keys, and can be loaded twice. The overlay's
+  background is blurred.
+- A quick Alt+Tab no longer draws the overlay; the focus request goes out as
+  soon as Hyprland gives focus back; windows that close mid-switch leave the
+  field; ages seeded at startup read "earlier"; text follows Omarchy's text
+  size.
+- `tests/qml/render.sh` renders the field offscreen for design review.
+
 ## 0.1.0 (unreleased)
 
 Phase 0.

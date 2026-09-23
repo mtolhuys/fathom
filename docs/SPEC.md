@@ -2,26 +2,34 @@
 
 Fathom replaces Alt-Tab with a spatial-temporal switcher for Omarchy Quattro.
 Windows are placed on a z-axis by the time since they last had focus: the
-window you used most recently is in front, sharp and large; older windows
-recede into fog, smaller, blurred and dimmer. Holding Alt opens the field, Tab
-dives one window deeper, the scroll wheel dives freely, the mouse parallaxes
-the field, and releasing Alt focuses the window in front.
+window you used most recently is in front, older windows recede into the
+distance and the fog. Holding Alt opens the field, Tab (or Down, or the wheel)
+dives one window deeper, and releasing Alt focuses the window in front. Below
+the depth view, a map shows every workspace with its windows where they
+really are.
 
 v1 is an overlay only: no real window moves.
 
-Status: Phase 0 implemented (see [PHASE0.md](PHASE0.md)). Phase 1 not started.
+Status: 0.2.0. Phase 0 (0.1.0, see [PHASE0.md](PHASE0.md)) proved the
+mechanics; Phase 1 (0.2.0, see [PHASE1.md](PHASE1.md)) is the product: the
+card layout, the workspace map, fog, background blur, the wheel, arrows and
+the filter. Mouse parallax is still open.
 
-Rules marked **(kickstart)** come from the original brief and are fixed. Rules
-marked **(decision)** were settled while building Phase 0 and can be revisited.
+Rules marked **(kickstart)** come from the original brief. Rules marked
+**(decision)** were settled while building and can be revisited. Rules marked
+**(owner)** were asked for by Maarten after using Phase 0.
 
 ## Terms
 
 - **Field**: the ordered set of windows shown while Fathom is open.
-- **Plane**: one window in the field, drawn from a live capture.
-- **Depth**: a plane's distance on the z-axis, derived from time since focus.
-- **Camera**: the viewer's position on the z-axis. It sits on the selection.
-- **Selection**: the plane nearest the camera plane. It gets an outline.
-- **Passed plane**: a plane in front of the selection (the camera went past it).
+- **The Deep**: the depth view, a stack of cards receding from the camera.
+- **Card**: one window in the Deep, drawn from a live capture.
+- **The map** (the Surface): one card per workspace, with a minimap of its
+  windows.
+- **Depth**: a window's distance on the z-axis, derived from time since focus.
+- **Camera**: the viewer's position in the stack. It sits on the selection.
+- **Selection**: the card at the camera. It gets the accent ring.
+- **Passed card**: a card in front of the selection (the camera went past it).
 
 ## Recency model
 
@@ -37,98 +45,141 @@ keeps its own map `address -> lastActiveAt` inside the plugin. **(kickstart)**
   - `openwindow>>ADDRESS,...` records the open time for a window the map does
     not know yet. A new window counts as recent even if it never takes focus.
     **(decision)**
-  - `closewindow>>ADDRESS` removes the window.
+  - `closewindow>>ADDRESS` removes the window, and drops it from an open
+    field at once.
 - `lastActiveAt` is the last moment a window **held** focus: when focus moves
   from A to B, A is stamped with the moment it lost focus. The focused window
-  is always zero seconds away. A window used for ten minutes and left five
-  seconds ago is five seconds deep, not ten minutes. **(decision)**
+  is always zero seconds away. **(decision)**
 - Seed at startup from Hyprland's client list: the window with
-  `focusHistoryID = k` is assumed to have lost focus `k * 30 s` ago (one depth
-  unit per step). A window with a negative `focusHistoryID` (never focused)
-  stays unknown and sits at maximum depth. Events that arrive before the seed
-  completes win over it. **(kickstart, step size is a decision)**
+  `focusHistoryID = k` is assumed to have lost focus `k * 30 s` ago. The order
+  is Hyprland's and real; the times are a guess, so such a window is marked
+  **estimated** and its age reads "earlier" until Fathom sees it lose focus.
+  A window with a negative `focusHistoryID` (never focused) sits at maximum
+  depth. Events that arrive before the seed completes win over it.
+  **(kickstart, step size and labels are decisions)**
 - The client list is the JSON `hyprctl clients -j` prints, but Fathom reads it
   from Quickshell: `Hyprland.refreshToplevels()` sends the same `j/clients`
   request over Quickshell's own socket and fills each toplevel's
-  `lastIpcObject`. Fathom therefore starts no program at all, which is what
-  omakit's build job asks of a plugin before anything else (a program it did
-  start would have to go through omakit's Run block). The seed is retried
-  every 500 ms until the reply has landed, and repeated for unknown windows
-  each time the field opens. **(decision)**
-- Time is frozen when the field opens; depths do not drift while it is open.
+  `lastIpcObject`. Fathom starts no program. The seed is retried every 500 ms
+  until the reply lands, and repeated for unknown windows each time the field
+  opens. **(decision)**
+- Time is frozen when the field opens; ages do not drift while it is open.
 
-Addresses are stored lowercase without the `0x` prefix (socket2 and Quickshell
-omit it, hyprctl prints it). Anything that is not plain non-zero hex is
-rejected before it can reach a dispatch string.
+Addresses are stored lowercase without the `0x` prefix. Anything that is not
+plain non-zero hex is rejected before it can reach a dispatch string.
 
 ## Window set
 
-- Every mapped window on every regular workspace and every monitor.
-- Excluded: special workspaces (scratchpads), unmapped windows, and windows
-  without a Wayland toplevel handle (they cannot be captured). **(decision)**
+- Every mapped window on every workspace and every monitor, scratchpads
+  (special workspaces) included. **(owner: "all workspaces")**
+- Excluded: unmapped windows, and windows without a Wayland toplevel handle
+  (they cannot be captured). **(decision)**
 - Order, front to back: the focused window, then ascending seconds since
   focus; ties by `focusHistoryID`, then by address. **(decision)**
+- The field is frozen while open: a window that closes leaves it (the
+  selection moves to the window behind it), a window that opens joins the next
+  switch. **(decision)**
 - The overlay is shown on the focused monitor only; a surface per output
   would duplicate every capture. **(decision)**
 
-## Depth rules **(kickstart)**
+## Depth rules
 
 ```
-depth    = log2(1 + secondsSinceFocus / 30), clamped to [0, 8]
-scale    = 1 / (1 + depth * 0.45)
-opacity  = 1 - depth * 0.09
-blur     = depth * 6 px            (Phase 1)
-fog      = depth * 0.08 alpha      (Phase 1)
+depth    = log2(1 + secondsSinceFocus / 30), clamped to [0, 8]   (kickstart)
+fog      = depth * 0.08 alpha                                     (kickstart)
+blur     = the compositor blurs what is behind the overlay        (decision)
 ```
 
-Reference points: 0 s is depth 0, 30 s is 1, 90 s is 2, 210 s is 3, about 2 h
-08 min reaches the clamp at 8 (scale 0.217, opacity 0.28).
+Reference points: 0 s is depth 0, 30 s is 1, 90 s is 2, 210 s is 3, about
+2 h 08 min reaches the clamp at 8 (fog 0.64).
 
-Planes are drawn as seen from the camera: the formulas take
-`relativeDepth = depth - cameraDepth`, clamped at 0, for the selection and
-every plane behind it. The selection is therefore always full size and fully
-opaque. **(decision)**
+The brief also set `scale = 1 / (1 + depth * 0.45)` and
+`opacity = 1 - depth * 0.09`. Phase 0 applied them, and in use most windows
+were too small and too faint to recognise. **(owner)** Since 0.2 the stack
+position is set by a window's place in the order, not its age, and age shows
+as fog and as a label. Every card stays readable; an old window still looks
+further away. **(decision)**
 
-Passed planes fade out over half a window step and grow by up to 30%, so they
-read as flying past the viewer. Scale and opacity are continuous where the
-camera meets a plane. **(decision)**
+## The Deep **(decision)**
 
-## Layout
+Every window is a card of the monitor's shape, with a header strip (app icon,
+title, age) and the window fitted inside it, so the stack steps evenly
+whatever the windows' own shapes are.
 
-Phase 0 **(decision, placeholder)**: the plane at the camera is centered and
-fitted, at its window's aspect ratio, into a box of 56% of the screen. Planes
-recede toward a vanishing point at (92%, 10%) of the screen: a plane at scale
-`s` sits `(1 - s)` of the way from the center to that point. Because the point
-lies outside the front plane, every smaller plane shows past the plane in front
-of it. Planes at equal depth (for example several at the clamp) are separated
-by a small per-step nudge up and to the right.
+- The selection's card sits in the front box, as large as the Deep allows
+  (at most half the screen's width).
+- Each card behind it is scaled by 0.82 per step, and its top-right corner
+  moves up and to the right by a step that shrinks by 0.86 per step. Every
+  card therefore shows its whole header above the card in front of it and a
+  band of its content to the right. The stack (front card plus five behind
+  it) is centered in the space above the caption. Cards further back fade
+  out; the map shows them.
+- Fog darkens the capture of every card behind the camera, by its age and a
+  little by its distance, never the header.
+- Passed cards grow and slide out to the lower left, fading within 0.6
+  steps.
+- The camera animates between cards in 220 ms (OutCubic).
+- Captures run only for cards near the camera (from one step passed to the
+  last visible card) and only while the field is open.
+- A window that cannot be captured (a scrolling layout parks windows beside
+  the screen and Hyprland does not render them) shows its app icon and name
+  instead of an empty frame.
+- Urgent windows (Hyprland's urgent flag) get a red ring and dot.
 
-Phase 1 **(kickstart)**: perspective layout; front window centered; each deeper
-window offset along a slight diagonal so they never fully occlude each other.
+## The map **(owner, decision)**
+
+A row of cards along the bottom, one per workspace that has windows, plus the
+workspace on screen even when it is empty; regular workspaces by number, then
+named ones, then scratchpads.
+
+- Each card shows the workspace's name, its window count ("2 of 5" while
+  filtering), whether it is on screen, and the monitor's name when there is
+  more than one.
+- The minimap draws the monitor's screen area and every window at its real
+  position and size with its app icon. A scrolling layout's whole strip is
+  shown, compressed; windows parked beside the screen are dimmer. The tabs of
+  a group split their rectangle. Unknown geometry falls back to a grid.
+- Positions follow Hyprland's client list, which is refreshed when the field
+  opens, so the minimap is never older than the field.
+- The selection is filled with the accent, the focused window has a bright
+  outline, urgent windows a red one; windows filtered out fade.
+- Card widths follow each minimap's shape and shrink together when the row is
+  full.
 
 ## Camera and input
+
+| Input | Hold mode (Alt held) | Browse mode |
+| --- | --- | --- |
+| Tab / Shift+Tab | one deeper / shallower, wrapping **(kickstart)** | same |
+| Down / Up, wheel down / up | one deeper / shallower, stopping at the ends | same |
+| Right / Left, sideways wheel | the most recent window of the next / previous workspace | same |
+| Home / End, PageDown / PageUp | front / back, five deeper / shallower | same |
+| 1 to 9 | the most recent window of that workspace | same, until a filter is typed |
+| letters, digits after a letter | filter | filter |
+| Backspace, Ctrl+Backspace | edit, clear the filter | same |
+| Space | keep the field open after Alt (switch to browse) | a space in the filter |
+| Enter, a click on a card, the caption or a map window | focus it | same |
+| Escape | clear the filter, else close without focusing | same |
+| click on empty space | close without focusing | same |
+| release Alt | focus the selection (close when nothing matches) **(kickstart)** | nothing |
 
 - Alt+Tab opens the field with the camera on the second window (the one used
   before the current one), so a quick Alt+Tab switches back. Alt+Shift+Tab
   opens it at the far end. **(decision)**
-- Tab moves the camera one window deeper, Shift+Tab one shallower. **(kickstart)**
-  Both wrap around at the ends. **(decision)**
-- The camera animates between windows in 180 ms (OutCubic). Depth and position
-  animate together. **(decision)**
-- Releasing Alt focuses the selection. Escape closes without focusing.
-  **(kickstart)** Enter also commits; a click on a plane commits that plane; a
-  click on empty space closes without focusing. **(decision)**
-- The scroll wheel moves the camera continuously; the plane nearest the camera
-  plane is the selection. **(kickstart, Phase 1)**
-- Two modes **(decision)**:
-  - *hold*: opened by the Alt chord (or `omarchy-shell fathom hold 1`, or a
-    shell summon carrying `{"step": 1}`). Releasing Alt commits. A chord step
-    arms hold mode even when the field was opened for browsing.
-  - *browse*: opened without a step (`omarchy-shell fathom open`, a plain
-    summon). Alt release does nothing; Enter, a click or Escape end it.
+- Hold mode draws the field only after 90 ms: a quick Alt+Tab switches without
+  flashing the overlay. The surface and its keyboard grab exist from the first
+  moment, so no key reaches the window underneath. **(decision)**
+- The filter matches every space-separated token against the app name, app
+  id, title and workspace name, case-insensitively. A new query selects its
+  most recent match. **(decision)**
+- Hovering a window on the map selects it, but only after the pointer really
+  moves: a pointer resting where the field opens selects nothing. Hovering a
+  card in the Deep only highlights it, because the Deep moves under the
+  pointer. **(decision)**
+- Wheel notches step one window; touchpad pixels add up (60 px per window).
 - Hold mode needs at least two windows; browse needs one.
-- Watchdog: in hold mode, 15 s without input closes the field without
-  focusing, in case an Alt release is ever missed. **(decision)**
+- Watchdog: in hold mode, 15 s without input (keys, wheel, pointer movement)
+  closes the field without focusing, in case an Alt release is ever missed.
 
 ### How input reaches the plugin
 
@@ -138,60 +189,74 @@ to the shell: `fathom:next`, `fathom:previous` and `fathom:release`. Global
 shortcut events reach the shell in order over one Wayland connection, so a
 release can never overtake the open it belongs to.
 
+While Alt is held after Alt+Tab, Hyprland is in a `fathom` submap in which
+only Fathom's two chords are bound. Every other Alt chord (Omarchy's
+Alt+Left text navigation, another switcher's Alt+Up) then reaches the
+overlay, which holds exclusive keyboard focus, instead of its usual binding.
+Releasing Alt leaves the submap. **(decision)**
+
 A release bind on a bare modifier only fires when the modifier was tapped on
 its own, so the release comes from a raw `input.keyboard.key` hook for keycodes
-64 (Alt_L) and 108 (Alt_R), as in the altswitch plugin. The overlay also sees
-the Alt release itself once it holds exclusive keyboard focus. Every handler is
-idempotent, so two releases focus once.
+64 (Alt_L) and 108 (Alt_R), as in the altswitch plugin; it acts only inside
+the `fathom` submap. The overlay also sees the Alt release itself. Every
+handler is idempotent, so two releases focus once.
+
+The snippet can be loaded again: it removes the binds and the hook of the
+previous load first.
 
 ## Focusing **(kickstart, adapted)**
 
-- After the overlay surface is gone (100 ms), Fathom dispatches one focus
-  request through Quickshell's `Hyprland.dispatch`, which writes to the same
-  socket `hyprctl dispatch` uses.
-- Omarchy Quattro runs Hyprland 0.56+ with a Lua config, where dispatchers are
-  Lua expressions: `hl.dsp.focus({ window = "address:0x..." })`. This is what
-  the kickstart's `focuswindow address:<addr>` becomes under a Lua config; the
-  classic `focuswindow address:0x...` is still sent when Hyprland reports a
-  hyprlang config. Focusing a window on another workspace switches to it.
+- Fathom dispatches one focus request through Quickshell's
+  `Hyprland.dispatch`, which writes to the same socket `hyprctl dispatch`
+  uses: `hl.dsp.focus({ window = "address:0x..." })` under Hyprland's Lua
+  config, `focuswindow address:0x...` under hyprlang. Focusing a window on
+  another workspace switches to it.
 - A window in a Hyprland group has its tab activated first
   (`hl.dsp.group.active`), because `hl.dsp.focus` ignores hidden group tabs.
-- Waiting for the surface to unmap matters: releasing the exclusive keyboard
-  grab makes Hyprland restore focus to the previous window, which would undo an
-  earlier focus request.
+- The request waits until the overlay's keyboard grab is gone: releasing it
+  makes Hyprland restore focus to the previous window, which would undo an
+  earlier request. Hyprland announces the restore (`activewindowv2` with the
+  previous window's address) and the request goes out on that event; 120 ms
+  is the fallback.
+- A window that closed in the meantime gets no request.
 
-## Mouse parallax **(kickstart, Phase 1)**
+## Mouse parallax **(kickstart, open)**
 
 Horizontal and vertical offset proportional to depth, max 24 px at depth 8.
 
 Open question: the brief says both "deep windows move less" and "max 24 px at
 depth 8", which contradict each other. Proposed reading: the selection is
-pinned (the thing you are about to pick never jitters) and planes behind it
-shift by `24 px * relativeDepth / 8` against the pointer, like a camera
-orbiting the selection. To confirm before Phase 1.
+pinned and cards behind it shift by `24 px * relativeDepth / 8` against the
+pointer. To confirm.
 
 ## Performance **(kickstart)**
 
 - 60 fps target on integrated graphics.
-- Degrade blur before dropping frames. Proposed Phase 1 policy, to confirm:
-  when the frame probe's p95 exceeds 16.7 ms over 30 frames, halve the blur
-  radius; if it still does, drop blur beyond depth 4; then drop blur entirely.
-  Scale, opacity and fog are never degraded.
-- Captures exist only while the field is open (`captureSource` is null when
-  closed) and are rebuilt per open.
+- Captures exist only while the field is open, and only for cards near the
+  camera; the map draws icons, not captures.
+- Per-card blur (the brief's `blur = depth * 6 px`) is not used: the fog
+  carries depth, and the compositor's layer blur frosts the background once.
 - The frame probe (a `FrameAnimation` plus the window's `frameSwapped` count)
   runs only when asked for, because it keeps the overlay rendering every vsync.
 
 ## Safety **(kickstart)**
 
 - Never move, resize or close real windows in v1. The focus request (plus the
-  group tab activation) is the only compositor write.
+  group tab activation) is the only write to windows. The Lua snippet also
+  switches Hyprland's submap while Alt is held, and adds one layer rule.
 - No network, no daemon, no root. The plugin writes no files and starts no
-  programs (`tests/static.test.sh` holds that line; if it ever has to change,
-  processes go through omakit's Run block and files through its Store block).
+  programs (`tests/static.test.sh` holds that line).
 - The exclusive keyboard grab lasts only while the field is open, and Escape,
   a click, the Alt release and the watchdog all close it.
 - All code and identifiers in English.
+
+## Look **(decision)**
+
+Colors come from Omarchy's theme (`qs.Commons`: foreground, background,
+accent, muted, urgent), text from `Style.font.family` and Omarchy's text size,
+corner radii from Hyprland's rounding. The backdrop is the theme background at
+66 to 90 % from top to bottom, over a compositor blur (`hl.layer_rule` with
+`blur = true`).
 
 ## IPC
 
@@ -201,12 +266,16 @@ orbiting the selection. To confirm before Phase 1.
 | --- | --- |
 | `open` | Open in browse mode |
 | `hold <1\|-1>` | Same as the Alt chord: open in hold mode or step |
-| `step <1\|-1>` | Step while open |
+| `step <1\|-1>` | Tab or Shift+Tab while open |
+| `move <n>` | Move `n` windows, stopping at the ends |
+| `workspace <1\|-1>` | The next or previous workspace's most recent window |
+| `filter <text>` | Set the filter |
+| `pin` | Keep the field open after Alt (switch to browse) |
 | `release` | Same as releasing Alt |
 | `commit` / `cancel` | Focus the selection / close without focusing |
-| `state` | JSON: build identity, open state, mode, tracked windows, Lua config |
-| `field` | JSON: the field with seconds, depth, scale and opacity per window |
-| `captures` | JSON: per plane, whether a frame arrived and whether its workspace is on screen |
+| `state` | JSON: build identity, open, revealed, mode, counts, filter, Lua config |
+| `field` | JSON: every window with app, workspace, age, depth and fog |
+| `captures` | JSON: per card, whether it captures, whether a frame arrived, whether its workspace is on screen |
 | `bench <seconds>` | Open, dive every 250 ms with the frame probe on, close |
 | `stats` | JSON: last bench's frame times and time to first frame |
 
@@ -216,8 +285,10 @@ also work; a summon payload `{"step": 1}` behaves like the chord.
 ## Open questions
 
 1. Parallax wording (see above).
-2. Wrap at the ends, or stop? Phase 0 wraps, like classic Alt-Tab.
-3. Show the field only after a short delay (about 80 ms) in hold mode, so a
-   quick Alt+Tab switches without flashing the overlay?
-4. Persist the recency map across shell restarts? Phase 0 does not (the plugin
-   writes no files); a restart falls back to the focusHistoryID seed.
+2. Persist the recency map across shell restarts? The plugin writes no files;
+   a restart falls back to the focusHistoryID seed, whose ages read
+   "earlier". Persisting would need omakit's Store block.
+3. Focusing a window on a hidden scratchpad: Hyprland's focus dispatcher is
+   expected to show the scratchpad; not yet confirmed on a device.
+4. A default binding for browse mode (an overview key) is not shipped; any
+   bind can call `omarchy-shell fathom open`.
