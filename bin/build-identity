@@ -1,0 +1,22 @@
+#!/bin/bash
+# Prints the build identity of the working tree: Fathom's version name from
+# src/Fathom.qml plus a hash of every file a development install carries
+# (tracked and untracked, not ignored). bin/dev-sync stamps it into the
+# installed copy, so the running plugin names the exact tree it came from,
+# and bin/dev-status compares the two. Reads only.
+
+set -euo pipefail
+
+project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+readonly project_root
+
+base=$(sed -n 's/^[[:space:]]*readonly property string buildIdentity: "\([^"+]*\)[^"]*".*/\1/p' \
+  "$project_root/src/Fathom.qml")
+[[ -n $base ]] || { printf 'build-identity: no buildIdentity in src/Fathom.qml\n' >&2; exit 1; }
+
+hash=$(cd -- "$project_root" \
+  && git ls-files -z --cached --others --exclude-standard \
+  | while IFS= read -r -d '' path; do [[ -f $path ]] && printf '%s\0' "$path"; done \
+  | sort -z | xargs -0 -r sha256sum -- | sha256sum | cut -c1-12)
+
+printf '%s+%s\n' "$base" "$hash"

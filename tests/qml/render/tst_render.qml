@@ -34,7 +34,10 @@ TestCase {
     "rose-pine": ["#575279", "#faf4ed", "#56949f", "#b4637a"],
     "catppuccin-latte": ["#4c4f69", "#eff1f5", "#1e66f5", "#d20f39"],
     "flexoki-light": ["#100f0f", "#fffcf0", "#205ea6", "#d14d41"],
-    "white": ["#000000", "#ffffff", "#6e6e6e", "#2a2a2a"]
+    "white": ["#000000", "#ffffff", "#6e6e6e", "#2a2a2a"],
+    // A catppuccin variant on pure black, as used on the machine this was
+    // designed on.
+    "catppuccin-black": ["#cdd6f4", "#010101", "#89b4fa", "#f38ba8"]
   })
   // What sits behind the field, and whether apps that follow the theme are
   // light: set by useTheme for the next desktop.
@@ -149,8 +152,8 @@ TestCase {
     Hyprland.dispatches = []
   }
 
-  function render(name, fathom) {
-    wait(450)
+  function render(name, fathom, settleMs) {
+    wait(settleMs === undefined ? 450 : settleMs)
     // The surface: the field and the desktop behind it.
     const item = fathom.fieldView.parent
     let saved = false
@@ -320,5 +323,26 @@ TestCase {
     tryVerify(function() { return fathom.revealed }, 1000)
     fathom.jumpTo(1)
     render("12-map-frames-" + data.tag, fathom)
+  }
+
+  // Two windows on two workspaces, opened to browse: the first look (before
+  // any frame is kept) and every look after it.
+  function test_two_windows_data() {
+    return [{ tag: "catppuccin-latte", theme: "catppuccin-latte" }, { tag: "catppuccin-black", theme: "catppuccin-black" }]
+  }
+
+  function test_two_windows(data) {
+    useTheme(data.theme)
+    const rows = [
+      ["brave-origin", "tcballard/omarchy-task-manager - Brave Origin", 2, "2", 0, 28, 1596, 970, "#0d1117", {}],
+      ["com.anthropic.Claude", "Claude", 1, "1", 0, 28, 1596, 970, "#2b2622", { light: "#f7f4ee" }]
+    ]
+    let fathom = open(2, 1600, 1000, "browse", rows)
+    render("13-two-windows-" + data.theme + "-first", fathom, 150)
+    wait(600)
+    FakeSystem.ipc("fathom").cancel()
+    FakeSystem.ipc("fathom").open()
+    tryVerify(function() { return fathom.revealed }, 1000)
+    render("13-two-windows-" + data.theme + "-after", fathom)
   }
 }

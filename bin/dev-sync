@@ -48,10 +48,15 @@ wait_for_plugin_state() {
   return 1
 }
 
-expected_identity=$(sed -n 's/^[[:space:]]*readonly property string buildIdentity: "\([^"]*\)".*/\1/p' \
+source_identity=$(sed -n 's/^[[:space:]]*readonly property string buildIdentity: "\([^"]*\)".*/\1/p' \
   "$project_root/src/Fathom.qml")
+readonly source_identity
+[[ -n $source_identity ]] || fail "could not read the build identity from src/Fathom.qml"
+# The installed copy names the exact tree it came from (version plus a hash of
+# the files), so "loaded" below means this build and not the one before it;
+# bin/dev-status reads the same identity back.
+expected_identity=$(bash "$project_root/bin/build-identity")
 readonly expected_identity
-[[ -n $expected_identity ]] || fail "could not read the build identity from src/Fathom.qml"
 
 printf 'Checking the working tree...\n'
 bash "$project_root/bin/test"
@@ -71,6 +76,9 @@ while IFS= read -r -d '' tracked_path; do
 done < <(git -C "$snapshot_dir" ls-files -z)
 
 tar -C "$project_root" --exclude='./.git' -cf - . | tar -C "$snapshot_dir" -xf -
+sed -i "s|buildIdentity: \"$source_identity\"|buildIdentity: \"$expected_identity\"|" "$snapshot_dir/src/Fathom.qml"
+grep -qF "buildIdentity: \"$expected_identity\"" "$snapshot_dir/src/Fathom.qml" \
+  || fail "could not stamp the build identity into the snapshot"
 
 git -C "$snapshot_dir" add -A
 if ! git -C "$snapshot_dir" rev-parse --verify HEAD >/dev/null 2>&1 \

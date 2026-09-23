@@ -41,7 +41,11 @@ Phase 1: the product.
 - The map shows the last frame seen of each window, reusing the cards'
   snapshots (no capture of its own), and titles where the tiles have room. The
   window you were on keeps a frame too.
-- App icons load only while shown.
+- App icons load only while shown. Map tiles fade from icon to frame when
+  the first frame is kept.
+- `bin/dev-sync` stamps each install with the working tree's identity and
+  waits for exactly that build to answer; `bin/dev-status` (read-only) says
+  whether the running Fathom is the working tree.
 - `tests/qml/render.sh` renders the field offscreen for design review, in
   dark and light themes, over a stand-in desktop.
 - Never crash the compositor: the snippet loads once per Lua state and keeps

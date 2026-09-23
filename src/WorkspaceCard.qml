@@ -231,14 +231,17 @@ Item {
           color: tile.selected ? card.theme.tileSelected : (hover.containsMouse ? card.theme.tileHover : card.theme.tile)
 
           // The same image (and texture) the card holds: no copy, no capture.
+          // It fades in over the icon when the first frame is kept.
           Image {
             anchors.fill: parent
-            visible: tile.showsFrame
+            visible: opacity > 0
             source: tile.showsFrame ? tile.snapshot.url : ""
             fillMode: Image.PreserveAspectCrop
             smooth: true
             mipmap: true
-            opacity: tile.selected || hover.containsMouse ? 1 : 0.78
+            opacity: tile.showsFrame ? (tile.selected || hover.containsMouse ? 1 : 0.78) : 0
+
+            Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
           }
         }
 
@@ -247,7 +250,10 @@ Item {
           anchors.centerIn: parent
           anchors.verticalCenterOffset: tile.roomy ? -7 * card.textUnit : 0
           size: Math.min(26 * card.unit, Math.min(tile.width, tile.height) * (tile.roomy ? 0.42 : 0.64))
-          visible: !tile.showsFrame && size >= 7
+          opacity: tile.showsFrame ? 0 : 1
+          visible: opacity > 0 && size >= 7
+
+          Behavior on opacity { NumberAnimation { duration: 180 } }
           source: tile.entry ? tile.entry.icon : ""
           name: tile.entry ? tile.entry.appName : ""
         }
@@ -257,7 +263,10 @@ Item {
           anchors.bottom: parent.bottom
           anchors.bottomMargin: 4 * card.unit
           width: parent.width - 8 * card.unit
-          visible: tile.roomy && !tile.showsFrame
+          opacity: tile.showsFrame ? 0 : 1
+          visible: tile.roomy && opacity > 0
+
+          Behavior on opacity { NumberAnimation { duration: 180 } }
           horizontalAlignment: Text.AlignHCenter
           elide: Text.ElideRight
           color: tile.selected ? card.theme.text : card.theme.textSoft
@@ -277,8 +286,11 @@ Item {
           anchors.margins: 1
           height: Math.round(16 * card.textUnit)
           radius: Math.min(3 * card.unit, height / 2)
-          visible: tile.showsFrame
+          opacity: tile.showsFrame ? 1 : 0
+          visible: opacity > 0
           color: tile.roomy ? card.theme.panel : "transparent"
+
+          Behavior on opacity { NumberAnimation { duration: 180 } }
 
           AppIcon {
             id: stripIcon

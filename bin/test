@@ -41,10 +41,12 @@ if [[ -n $qmllint_bin ]]; then
 fi
 
 bash -n "$project_root/bin/test" "$project_root/bin/dev-sync" "$project_root/bin/load-bindings" \
+  "$project_root/bin/build-identity" "$project_root/bin/dev-status" \
   "$project_root/tests/manifest.test.sh" "$project_root/tests/static.test.sh" "$project_root/tests/qml/run.sh" \
   "$project_root/tests/qml/render.sh"
 if command -v shellcheck >/dev/null; then
   shellcheck "$project_root/bin/test" "$project_root/bin/dev-sync" "$project_root/bin/load-bindings" \
+    "$project_root/bin/build-identity" "$project_root/bin/dev-status" \
     "$project_root/tests/manifest.test.sh" "$project_root/tests/static.test.sh" "$project_root/tests/qml/run.sh" \
     "$project_root/tests/qml/render.sh"
   printf 'ok - ShellCheck\n'

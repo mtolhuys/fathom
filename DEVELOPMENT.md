@@ -32,8 +32,16 @@ Fathom runs inside Maarten's working session. These hold without exception:
   his apps and his games. Every live test (keys, captures, the bench, the
   bindings, `omakit weigh`) runs in the omakit lab, a disposable Omarchy guest.
   Deploying a lab-proven build is Maarten's own `bash bin/dev-sync`. On the
-  desktop an agent only reads (`bin/load-bindings --check`, `omarchy-shell
-  fathom state`, read-only `hyprctl`); the local agent hook enforces it.
+  desktop an agent only reads (`bin/load-bindings --check`, `bin/dev-status`,
+  `omarchy-shell fathom state`, read-only `hyprctl`); the local agent hook
+  enforces it.
+- Nobody guesses which build runs. `bin/dev-sync` stamps the installed copy
+  with the working tree's identity (`bin/build-identity`: version plus a hash
+  of the files) and waits until the running plugin reports exactly that one.
+  `bash bin/dev-status` (read-only) says whether the running Fathom is the
+  working tree; an agent handing work over quotes its line, and never
+  presents a committed change as what Maarten sees until it says "Up to
+  date".
 
 ## Invariants
 
