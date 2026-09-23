@@ -41,6 +41,18 @@ TestCase {
       apps: { dark: false, bg: "#faf4ed", surface: "#f2e9e1", raised: "#fffaf3", fg: "#575279", dim: "#9893a5", faint: "#dfdad9",
         accent: "#286983", colors: ["#286983", "#907aa9", "#56949f", "#d7827e", "#ea9d34", "#b4637a", "#ea9d34"] },
       wallpaper: ["#f4ede8", "#e8dcd3"], glow: "#d7827e", border: "#56949f", inactive: "#dfdad9"
+    },
+    "gruvbox": {
+      colors: ["#d4be98", "#282828", "#7daea3", "#ea6962"],
+      apps: { dark: true, bg: "#282828", surface: "#1d2021", raised: "#32302f", fg: "#d4be98", dim: "#7c6f64", faint: "#45403d",
+        accent: "#7daea3", colors: ["#7daea3", "#d3869b", "#a9b665", "#89b482", "#e78a4e", "#ea6962", "#d8a657"] },
+      wallpaper: ["#32302f", "#1d2021"], glow: "#d8a657", border: "#7daea3", inactive: "#45403d"
+    },
+    "catppuccin-latte": {
+      colors: ["#4c4f69", "#eff1f5", "#1e66f5", "#d20f39"],
+      apps: { dark: false, bg: "#eff1f5", surface: "#e6e9ef", raised: "#ffffff", fg: "#4c4f69", dim: "#8c8fa1", faint: "#ccd0da",
+        accent: "#1e66f5", colors: ["#1e66f5", "#8839ef", "#40a02b", "#179299", "#fe640b", "#d20f39", "#df8e1d"] },
+      wallpaper: ["#eff1f5", "#dce0e8"], glow: "#8839ef", border: "#1e66f5", inactive: "#ccd0da"
     }
   })
   property string theme: "tokyo-night"
@@ -304,7 +316,7 @@ TestCase {
   }
 
   function test_1_desktops() {
-    for (const name of ["tokyo-night", "rose-pine"]) {
+    for (const name of ["tokyo-night", "rose-pine", "gruvbox", "catppuccin-latte"]) {
       useTheme(name)
       renderDesktop("desktop-" + name, art.windows[0], art.windows[2])
       renderDesktop("desktop-" + name + "-photos", art.windows[7], art.windows[10])
@@ -313,7 +325,7 @@ TestCase {
 
   // The marketplace preview and the banner: Alt held, three windows down.
   function test_2_stills() {
-    for (const name of ["tokyo-night", "rose-pine"]) {
+    for (const name of ["tokyo-night", "rose-pine", "gruvbox", "catppuccin-latte"]) {
       useTheme(name)
       const fathom = makeFathom()
       hold(fathom)

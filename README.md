@@ -42,6 +42,10 @@ program, writes no file, and captures windows only while it is open.
   on a dark one, glass in the dark. Text is held to a readable contrast in
   every theme Omarchy ships.
 
+<p align="center">
+  <img src="docs/media/themes.webp" alt="Fathom in four Omarchy themes: Tokyo Night, Rosé Pine, Catppuccin Latte and Gruvbox" width="100%">
+</p>
+
 A window your scrolling layout parks beside the screen cannot be captured
 (Hyprland does not render it). Fathom shows the last frame it saw of that
 window, marked "last seen", or says it is off screen. Those frames stay in
