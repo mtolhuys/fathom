@@ -12,6 +12,10 @@ Item {
   property real size: 24
 
   readonly property bool loaded: image.status === Image.Ready
+  // Decoded at a power of two, at least twice the drawn size: a card's icon
+  // grows and shrinks with every step of the camera, and decoding it again at
+  // each size would blank it for a frame each time.
+  readonly property int textureSize: Math.min(512, Math.pow(2, Math.ceil(Math.log(Math.max(16, size * 2)) / Math.LN2)))
   // The letter stands in only where the icon theme has nothing, never for
   // the moment an icon takes to decode.
   readonly property bool missing: source.length === 0 || image.status === Image.Error
@@ -32,7 +36,7 @@ Item {
 
     anchors.fill: parent
     source: icon.visible ? icon.source : ""
-    sourceSize: Qt.size(Math.ceil(icon.size * 2), Math.ceil(icon.size * 2))
+    sourceSize: Qt.size(icon.textureSize, icon.textureSize)
     asynchronous: true
     mipmap: true
     fillMode: Image.PreserveAspectFit

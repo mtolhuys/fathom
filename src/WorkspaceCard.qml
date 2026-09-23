@@ -225,23 +225,34 @@ Item {
 
         Behavior on opacity { NumberAnimation { duration: 140 } }
 
-        ClippingRectangle {
+        Rectangle {
           anchors.fill: parent
           radius: Math.min(4 * card.unit, width / 4)
           color: tile.selected ? card.theme.tileSelected : (hover.containsMouse ? card.theme.tileHover : card.theme.tile)
+        }
 
-          // The same image (and texture) the card holds: no copy, no capture.
-          // It fades in over the icon when the first frame is kept.
-          Image {
-            anchors.fill: parent
-            visible: opacity > 0
-            source: tile.showsFrame ? tile.snapshot.url : ""
-            fillMode: Image.PreserveAspectCrop
-            smooth: true
-            mipmap: true
-            opacity: tile.showsFrame ? (tile.selected || hover.containsMouse ? 1 : 0.78) : 0
+        // The frame: the same image (and texture) the card holds, no copy and
+        // no capture. Only a tile that has one pays for the rounded clip (two
+        // offscreen passes on the GPU). It fades in over the icon when the
+        // first frame is kept.
+        Loader {
+          anchors.fill: parent
+          active: tile.showsFrame || opacity > 0
+          opacity: tile.showsFrame ? (tile.selected || hover.containsMouse ? 1 : 0.78) : 0
 
-            Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+          Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+          sourceComponent: ClippingRectangle {
+            radius: Math.min(4 * card.unit, width / 4)
+            color: "transparent"
+
+            Image {
+              anchors.fill: parent
+              source: tile.snapshot ? tile.snapshot.url : ""
+              fillMode: Image.PreserveAspectCrop
+              smooth: true
+              mipmap: true
+            }
           }
         }
 

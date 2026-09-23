@@ -1,0 +1,120 @@
+#!/bin/bash
+# Makes Fathom's artwork from the plugin's own QML: tests/qml/art renders the
+# field offscreen (the real controller and view, stand-in apps), and this
+# script composes it the way the compositor shows it, over a blurred desktop.
+#
+#   preview.webp               the marketplace preview (1920x1080)
+#   docs/media/banner.webp     the README banner (1600x600)
+#   screenshots-local/art/fathom-demo.webp, fathom-demo.gif
+#                              the demo (animated WebP for the README, a GIF
+#                              to share), published as release assets so they
+#                              are not in every install's clone
+#
+# Needs qmltestrunner (qt6-declarative), ImageMagick 7, ffmpeg and the Yaru
+# icons and JetBrains Mono that Omarchy ships. Renders in software: no card
+# shadows. Changes nothing outside this checkout and runs no desktop command.
+
+set -euo pipefail
+
+project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+readonly project_root
+readonly raw="$project_root/screenshots-local/art"
+readonly font_bold=/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Bold.ttf
+readonly font_regular=/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf
+
+runner=/usr/lib/qt6/bin/qmltestrunner
+for tool in "$runner" magick ffmpeg; do
+  command -v "$tool" >/dev/null 2>&1 || { printf 'make-art: %s is missing\n' "$tool" >&2; exit 1; }
+done
+[[ -f $font_bold ]] || { printf 'make-art: JetBrains Mono is missing\n' >&2; exit 1; }
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+rm -rf "$raw"
+mkdir -p "$work/src" "$work/tests" "$raw/demo" "$raw/composed" "$project_root/docs/media"
+cp "$project_root"/src/*.qml "$project_root"/src/*.js "$work/src/"
+cp "$project_root/tests/qml/FieldSurface.qml" "$work/src/FieldSurface.qml"
+sed "s|@OUT@|$raw|" "$project_root/tests/qml/art/tst_art.qml" > "$work/tests/tst_art.qml"
+
+printf 'Rendering...\n'
+QT_QPA_PLATFORM=offscreen "$runner" -import "$project_root/tests/qml/stubs" -input "$work/tests" "$@" \
+  | grep -E '^(PASS|FAIL|Totals)' || true
+[[ -f $raw/field-tokyo-night.png ]] || { printf 'make-art: the render failed\n' >&2; exit 1; }
+
+# What Hyprland does behind the layer: a blur, a touch of vibrancy.
+blurred() {
+  magick "$1" -blur 0x16 -modulate 100,112 "$2"
+}
+for desktop in tokyo-night tokyo-night-photos rose-pine rose-pine-photos; do
+  blurred "$raw/desktop-$desktop.png" "$raw/desktop-$desktop-blur.png"
+done
+
+# A field over its blurred desktop.
+compose() {
+  magick "$1" "$2" -compose over -composite "$3"
+}
+compose "$raw/desktop-tokyo-night-blur.png" "$raw/field-tokyo-night.png" "$raw/still-tokyo-night.png"
+compose "$raw/desktop-rose-pine-blur.png" "$raw/field-rose-pine.png" "$raw/still-rose-pine.png"
+
+printf 'preview.webp\n'
+magick "$raw/still-tokyo-night.png" -quality 90 "$project_root/preview.webp"
+
+printf 'docs/media/banner.webp\n'
+# Dark and light, split on a diagonal: every theme, one plugin.
+magick "$raw/still-tokyo-night.png" \
+  \( "$raw/still-rose-pine.png" \( -size 1920x1080 xc:black -fill white \
+     -draw "polygon 1180,0 1920,0 1920,1080 860,1080" \) -alpha off -compose copy-opacity -composite \) \
+  -compose over -composite -resize 880x495 \
+  \( +clone -alpha extract -fill black -colorize 100 -fill white -draw "roundrectangle 0,0 879,494 16,16" \) \
+  -alpha off -compose copy-opacity -composite "$raw/banner-shot.png"
+magick -size 1600x600 gradient:'#1f2335-#0b0c14' \
+  \( -size 900x900 radial-gradient:'#7aa2f733-#7aa2f700' \) -geometry +820-120 -compose over -composite \
+  "$raw/banner-bg.png"
+magick "$raw/banner-bg.png" \
+  \( "$raw/banner-shot.png" \( +clone -background '#000000' -shadow 60x22+0+18 \) +swap \
+     -background none -layers merge +repage \) -geometry +640+30 -compose over -composite \
+  -stroke '#3b4261' -strokewidth 2 -draw "line 96,150 96,470" \
+  -stroke '#565f89' -strokewidth 2 \
+  -draw "line 90,150 102,150" -draw "line 92,214 100,214" -draw "line 90,278 102,278" \
+  -draw "line 92,342 100,342" -draw "line 90,406 102,406" -draw "line 92,470 100,470" \
+  -stroke '#7aa2f7' -strokewidth 3 -draw "line 96,150 96,300" -stroke none \
+  -fill '#7aa2f7' -draw "polygon 96,288 108,300 96,312 84,300" \
+  -font "$font_regular" -pointsize 15 -fill '#565f89' \
+  -annotate +44+155 'now' -annotate +46+283 '1m' -annotate +46+411 '1h' \
+  -font "$font_bold" -pointsize 108 -fill '#c0caf5' -annotate +140+232 'Fathom' \
+  -font "$font_regular" -pointsize 32 -fill '#a9b1d6' \
+  -annotate +146+298 'Alt+Tab that dives' -annotate +146+340 'through time.' \
+  -pointsize 19 -fill '#737aa2' -annotate +146+390 'Every window as deep as it is old.' \
+  -fill '#24283b' -stroke '#3b4261' -strokewidth 2 \
+  -draw "roundrectangle 146,424 214,464 8,8" -draw "roundrectangle 244,424 312,464 8,8" -stroke none \
+  -font "$font_bold" -pointsize 20 -fill '#c0caf5' -annotate +161+451 'Alt' -annotate +256+451 'Tab' \
+  -font "$font_regular" -fill '#565f89' -annotate +223+451 '+' \
+  -pointsize 16 -annotate +146+540 'An Omarchy plugin  ·  any theme, light or dark' \
+  -quality 92 "$project_root/docs/media/banner.webp"
+
+printf 'fathom-demo.webp, fathom-demo.gif\n'
+n=0
+for frame in "$raw"/demo/f*.png; do
+  n=$((n + 1))
+  name=$(basename "$frame" .png)
+  blur=${name#*_b}
+  blur=$((10#${blur%%_*}))
+  desktop=${name##*_}
+  sharp="$raw/desktop-tokyo-night.png"
+  soft="$raw/desktop-tokyo-night-blur.png"
+  if [[ $desktop == photos ]]; then
+    sharp="$raw/desktop-tokyo-night-photos.png"
+    soft="$raw/desktop-tokyo-night-photos-blur.png"
+  fi
+  magick "$sharp" "$soft" -compose blend -define "compose:args=$blur" -composite \
+    "$frame" -compose over -composite -resize 1280x720 "$raw/composed/$(printf '%04d' "$n").png"
+done
+ffmpeg -loglevel error -y -framerate 15 -i "$raw/composed/%04d.png" \
+  -c:v libwebp_anim -lossless 0 -q:v 82 -preset picture -loop 0 "$raw/fathom-demo.webp"
+# Error diffusion keeps the gradients smooth where ordered dithering bands.
+ffmpeg -loglevel error -y -framerate 15 -i "$raw/composed/%04d.png" \
+  -vf "split[a][b];[a]palettegen=max_colors=256:stats_mode=full[p];[b][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle" \
+  -loop 0 "$raw/fathom-demo.gif"
+
+du -h "$project_root/preview.webp" "$project_root/docs/media/banner.webp" "$raw/fathom-demo.webp" "$raw/fathom-demo.gif"

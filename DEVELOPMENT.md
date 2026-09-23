@@ -90,6 +90,14 @@ Fathom runs inside Maarten's working session. These hold without exception:
   in dark and light themes over a stand-in desktop. The offscreen renderer is
   Qt's software one: shadows, glows and blur do not show there (the lab
   shows them).
+- The artwork comes from the same QML: `bash bin/make-art` renders
+  `tests/qml/art` (illustrated stand-in apps from
+  `tests/qml/stubs/FathomTest/MockApp.qml`, real focus ages) and composes it
+  over a blurred desktop into `preview.webp` (the marketplace preview),
+  `docs/media/banner.webp` and the demo. Omarchy installs a plugin with a
+  plain `git clone`, so every tracked byte reaches every user: the demo
+  (WebP and GIF) is a release asset, never tracked, and the tracked images
+  stay small.
 
 ## Checks
 

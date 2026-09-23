@@ -238,16 +238,30 @@ overlay, which holds exclusive keyboard focus, instead of its usual binding.
 Releasing Alt leaves the submap. **(decision)**
 
 A release bind on a bare modifier only fires when the modifier was tapped on
-its own, so the release comes from a raw `input.keyboard.key` hook for keycodes
-64 (Alt_L) and 108 (Alt_R), as in the altswitch plugin; it acts only inside
-the `fathom` submap. The overlay also sees the Alt release itself. Every
-handler is idempotent, so two releases focus once.
+its own, so the release comes from a raw `input.keyboard.key` hook, as in the
+altswitch plugin. It acts only while a switch is held (set by the chord, with
+or without the submap), for the keys that make Alt: keycodes 64 (Alt_L) and
+108 (Alt_R), moved by the XKB options that move Alt (`altwin:swap_alt_win`,
+`swap_lalt_lwin`, `swap_ralt_rwin`, `ctrl_alt_win`, `alt_win`,
+`ctrl:swap_lalt_lctl`, `swap_ralt_rctl`, `swap_lalt_lctl_lwin`), read from
+`input:kb_options` once per switch. A right Alt that types AltGr
+(`lv3:ralt_switch`, an `intl` or `altgr` variant) does not commit. The
+overlay also sees the Alt release itself, and when the `fathom` layer closes
+for any reason a `layer.closed` hook leaves the submap, so the user's other
+shortcuts can never be left held. Every handler is idempotent, so two
+releases focus once.
+
+The snippet binds nothing while the shell does not list Fathom in
+`shell.json` (`omarchy plugin disable` and `remove` take it out), and returns
+whether it took Alt+Tab, so a caller can fall back to another switcher. It
+reads `shell.json` at each config load.
 
 A second load in the same Lua state does nothing: tearing a keybind or an
 event hook down from Lua crashed Hyprland 0.56.2 (see PHASE1.md). Changes to
 the snippet take effect on `hyprctl reload`, which starts a fresh Lua state.
-The release hook is set up before anything that could fail, and the submap is
-optional, so Alt+Tab works even where the submap cannot be defined.
+The hooks are set up before anything that could fail, the submap is optional,
+so Alt+Tab works even where the submap cannot be defined, and the cosmetic
+layer rule sits in a `pcall`.
 
 ## Focusing **(kickstart, adapted)**
 
@@ -304,8 +318,8 @@ pointer. To confirm.
 
 Colors come from Omarchy's theme (`qs.Commons`: foreground, background,
 accent, urgent), derived by `src/Palette.js` and re-derived when the theme
-changes; text from `Style.font.family` and Omarchy's text size, corner radii
-from Hyprland's rounding.
+changes; text from `Style.font.family` and Omarchy's text size. Corner radii
+scale with the screen and with a card's depth.
 
 - A theme is light when its background is lighter than its text. Dark: glass
   cards lit from above, fog into the dark, the scene darkening as you dive.

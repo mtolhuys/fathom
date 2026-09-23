@@ -1,10 +1,13 @@
 -- Fathom keybindings for Hyprland 0.56 or newer, configured in Lua.
 --
--- Load it from ~/.config/hypr/bindings.lua (README.md shows a block that also
--- falls back to another switcher while Fathom is not installed), or for the
--- current session only with `bash bin/load-bindings` from Fathom's checkout.
--- Do not load it with a raw `hyprctl eval`: bin/load-bindings is the one way
--- that checks Hyprland before and after.
+-- Load it from ~/.config/hypr/bindings.lua with the block in README.md, or
+-- for the current session only with `bash bin/load-bindings` from Fathom's
+-- checkout. Do not load it with a raw `hyprctl eval`: bin/load-bindings is
+-- the one way that checks Hyprland before and after.
+--
+-- It returns true when Fathom holds Alt+Tab, and false when the shell does
+-- not have Fathom enabled (then Omarchy's own Alt+Tab, or the caller's
+-- fallback, stays in place).
 --
 -- Loading it twice in one Lua state does nothing the second time. Never
 -- tear down what a load set up: removing a keybind from Lua crashed Hyprland
@@ -15,20 +18,100 @@
 -- with checks before and after).
 
 if rawget(_G, "__fathom") then
-  return
+  return true
 end
 
-local fathom = {}
+-- Fathom takes Alt+Tab only while the shell has it enabled: `omarchy plugin
+-- disable` and `remove` take its entry out of shell.json. Read at every config
+-- load; a shell.json that cannot be read counts as enabled.
+local function enabled()
+  local file = io.open((os.getenv("HOME") or "") .. "/.config/omarchy/shell.json", "r")
+  if not file then
+    return true
+  end
+  local text = file:read("a") or ""
+  file:close()
+  return text:find('"io.github.mtolhuys.fathom"', 1, true) ~= nil
+end
+
+if not enabled() then
+  return false
+end
+
+local fathom = { holding = false, alt = {} }
 _G.__fathom = fathom
 
 local function send(name)
   hl.dispatch(hl.dsp.global("fathom:" .. name))
 end
 
+-- The physical keys that make Alt. The key hook below sees key codes, not what
+-- the layout makes of them, and XKB options can move Alt: to the Windows keys,
+-- to Ctrl, or turn the right Alt into AltGr. Key codes: 64 and 108 are Alt,
+-- 133 and 134 Super, 37 and 105 Control (left and right).
+local ALT_MOVED = {
+  ["altwin:swap_alt_win"] = { 133, 134 },
+  ["altwin:swap_lalt_lwin"] = { 133, 108 },
+  ["altwin:swap_ralt_rwin"] = { 64, 134 },
+  ["altwin:ctrl_alt_win"] = { 37, 105 },
+  ["ctrl:swap_lalt_lctl"] = { 37, 108 },
+  ["ctrl:swap_ralt_rctl"] = { 64, 105 },
+  ["ctrl:swap_lalt_lctl_lwin"] = { 133, 108 },
+}
+
+local function setting(key)
+  local ok, value = pcall(hl.get_config, key)
+  return ok and type(value) == "string" and value or ""
+end
+
+local function alt_keycodes()
+  local options = "," .. setting("input.kb_options"):gsub("%s", "") .. ","
+  local codes = { 64, 108 }
+  for option, moved in pairs(ALT_MOVED) do
+    if options:find("," .. option .. ",", 1, true) then
+      codes = moved
+    end
+  end
+  local keys = {}
+  for _, code in ipairs(codes) do
+    keys[code] = true
+  end
+  if options:find(",altwin:alt_win,", 1, true) then
+    keys[133], keys[134] = true, true
+  end
+  -- A right Alt that types AltGr is not Alt: letting it go must not commit.
+  local variant = setting("input.kb_variant")
+  if options:find(",lv3:ralt_switch", 1, true) or variant:find("intl", 1, true) or variant:find("altgr", 1, true) then
+    keys[108] = nil
+  end
+  return keys
+end
+
+-- The end of a switch, however it ends: Alt let go, or the overlay closing on
+-- its own (Escape, a click, the watchdog, or a release only the overlay saw).
+-- Leaves the submap in every case, so the user's other shortcuts can never be
+-- left held; forwards the release only when Alt was let go. Idempotent.
+local function finish(release)
+  if not fathom.holding then
+    return
+  end
+  fathom.holding = false
+  if hl.get_current_submap() == "fathom" then
+    hl.dispatch(hl.dsp.submap("reset"))
+  end
+  if release then
+    send("release")
+  end
+end
+
 -- Alt+Tab and Alt+Shift+Tab: tell the shell, then hold the keyboard's Alt
 -- chords for Fathom until Alt is released.
 local function chord(name)
   return function()
+    if not fathom.holding then
+      fathom.holding = true
+      fathom.alt = alt_keycodes()
+    end
     send(name)
     if fathom.submap and hl.get_current_submap() ~= "fathom" then
       hl.dispatch(hl.dsp.submap("fathom"))
@@ -46,15 +129,17 @@ end
 -- read instead (the approach of the altswitch plugin). The release is also
 -- seen when Alt is let go before the overlay has keyboard focus.
 --
--- 64 is Alt_L and 108 is Alt_R. This runs for every key event, so outside a
--- switch it stays at a table lookup and a string comparison. It is set up
--- before anything that could fail.
-local FATHOM_ALT_KEYCODES = { [64] = true, [108] = true }
-
+-- This runs for every key event, so outside a switch it stays at one boolean.
+-- The hooks are set up before anything that could fail.
 hl.on("input.keyboard.key", function(keycode, _, state)
-  if state == 0 and FATHOM_ALT_KEYCODES[keycode] and hl.get_current_submap() == "fathom" then
-    hl.dispatch(hl.dsp.submap("reset"))
-    send("release")
+  if state == 0 and fathom.holding and fathom.alt[keycode] then
+    finish(true)
+  end
+end)
+
+hl.on("layer.closed", function(layer)
+  if layer and layer.namespace == "fathom" then
+    finish(false)
   end
 end)
 
@@ -65,13 +150,14 @@ hl.unbind("ALT + SHIFT + TAB")
 bind_chords()
 
 -- The submap is optional: when it cannot be defined, Alt+Tab still works and
--- simply does not hold the other Alt chords. The release hook above is
--- already in place either way, so the submap can never be left behind.
+-- simply does not hold the other Alt chords. The hooks above are in place
+-- either way, so the submap can never be left behind.
 fathom.submap = pcall(hl.define_submap, "fathom", bind_chords)
 
 -- Show the field at once instead of fading the layer in, and frost what is
--- behind it.
-hl.layer_rule({
+-- behind it. Cosmetic: a Hyprland that renames a field here must not cost
+-- the bindings above.
+pcall(hl.layer_rule, {
   name = "fathom",
   match = { namespace = "^fathom$" },
   no_anim = true,
@@ -79,3 +165,5 @@ hl.layer_rule({
   blur = true,
   ignore_alpha = 0.3,
 })
+
+return true

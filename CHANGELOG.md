@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.0 (2026-09-24)
 
 Phase 1: the product.
 
@@ -41,8 +41,19 @@ Phase 1: the product.
 - The map shows the last frame seen of each window, reusing the cards'
   snapshots (no capture of its own), and titles where the tiles have room. The
   window you were on keeps a frame too.
-- App icons load only while shown. Map tiles fade from icon to frame when
-  the first frame is kept.
+- App icons load only while shown, decoded at a few fixed sizes so a moving
+  card never reloads its icon. Map tiles fade from icon to frame when the
+  first frame is kept, and only a tile with a frame pays for a rounded clip.
+- Other people's keyboards and setups: the `Alt` release follows XKB options
+  that move `Alt` (to the Windows or Ctrl keys) and ignores an `AltGr`; it
+  works without the submap too; and the overlay closing for any reason always
+  leaves the submap, so no shortcut can be left held. The snippet binds
+  nothing while Fathom is not enabled, returns whether it took `Alt`+`Tab`
+  (for a fallback switcher), and cannot stop the rest of a config from
+  loading. The README covers installing from GitHub, updating, removing, a
+  `hyprland.conf`, and troubleshooting, and states the real minimums.
+- The artwork (marketplace preview, README banner, demo) is rendered from the
+  plugin's own QML by `bin/make-art`.
 - `bin/dev-sync` stamps each install with the working tree's identity and
   waits for exactly that build to answer; `bin/dev-status` (read-only) says
   whether the running Fathom is the working tree.
@@ -54,7 +65,7 @@ Phase 1: the product.
   changed), and `bin/dev-sync` uses it so a changed snippet always takes
   effect. See docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md.
 
-## 0.1.0 (unreleased)
+## 0.1.0 (not released)
 
 Phase 0.
 

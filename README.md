@@ -1,6 +1,10 @@
+<p align="center">
+  <img src="docs/media/banner.webp" alt="Fathom: Alt+Tab that dives through time. An Omarchy plugin." width="100%">
+</p>
+
 # Fathom
 
-A depth-based Alt-Tab for [Omarchy](https://omarchy.org/) Quattro.
+A depth-based Alt+Tab for [Omarchy](https://omarchy.org/) Quattro.
 
 Windows are placed on a z-axis by how long ago you last used them. The window
 you used most recently is in front; older ones recede into the distance and
@@ -8,11 +12,13 @@ the fog. Hold `Alt`, dive with `Tab`, the arrows or the wheel, release `Alt` to
 focus the window in front. Below the stack, a map shows every workspace with
 its windows where they really are.
 
-Fathom is an overlay only: it never moves, resizes or closes a window. Focusing
-the one you pick is the only thing it asks the compositor to do.
+<p align="center">
+  <img src="https://github.com/mtolhuys/fathom/releases/download/v0.2.0/fathom-demo.webp" alt="Alt+Tab opens Fathom over the desktop; Tab dives four windows deep while the sounding line's lead descends and the map follows; Right jumps to the next workspace; typing filters to a photo library; releasing Alt focuses it." width="100%">
+</p>
 
-> Status: 0.2.0 (unreleased). See [docs/SPEC.md](docs/SPEC.md),
-> [docs/PHASE0.md](docs/PHASE0.md) and [docs/PHASE1.md](docs/PHASE1.md).
+Fathom is an overlay only: it never moves, resizes or closes a window. Focusing
+the one you pick is the only thing it asks the compositor to do. It starts no
+program, writes no file, and captures windows only while it is open.
 
 ## What you see
 
@@ -74,22 +80,57 @@ but not when you used them; those say "earlier" until you switch.
 
 ## Requirements
 
-- Omarchy Quattro (the Quickshell shell and its plugin system)
+- Omarchy 4.0 or newer (Quattro: the Quickshell shell and its plugin system),
+  with Quickshell 0.3 and Qt 6.9 or newer
 - Hyprland 0.56 or newer, configured in Lua (Omarchy's default)
 
-## Install (development)
+With a `hyprland.conf` instead of Lua, bind `Alt`+`Tab` and `Alt`+`Shift`+`Tab`
+to the global shortcuts `fathom:next` and `fathom:previous` (for example
+`bind = ALT, TAB, global, fathom:next`). The overlay commits when it sees `Alt`
+released; a switch too quick for it to take the keyboard stays open until
+`Enter` or `Escape`. The Lua snippet below does all of that for you.
+
+## Install
 
 ```bash
-bash bin/dev-sync
+omarchy plugin add https://github.com/mtolhuys/fathom --enable
 ```
 
-This runs the tests, installs the working tree as a plugin through `omarchy
-plugin add`, enables it, and waits for it to answer on IPC.
+Then give `Alt`+`Tab` to Fathom. Add this block at the end of
+`~/.config/hypr/bindings.lua`:
 
-Then make Alt+Tab Fathom's. To keep it, add this block to
-`~/.config/hypr/bindings.lua` in place of any other switcher's `dofile` line
-(here altswitch, which stays the fallback while Fathom is not installed, for
-example halfway through a reinstall):
+```lua
+-- fathom: begin
+do
+  local fathom = os.getenv("HOME") .. "/.config/omarchy/plugins/io.github.mtolhuys.fathom/hypr/fathom.lua"
+  local file = io.open(fathom, "r")
+  if file then
+    file:close()
+    pcall(dofile, fathom)
+  end
+end
+-- fathom: end
+```
+
+Hyprland reloads its config when you save the file, and `Alt`+`Tab` opens
+Fathom. The block does nothing while Fathom is not installed or not enabled
+(the snippet checks the shell's `shell.json`), and an error in it can never
+stop the rest of your config from loading.
+
+Check who owns `Alt`+`Tab` at any time:
+
+```bash
+bash ~/.config/omarchy/plugins/io.github.mtolhuys.fathom/bin/load-bindings --check
+```
+
+The snippet takes over `Alt`+`Tab` and `Alt`+`Shift`+`Tab` from Omarchy's
+defaults, adds a key hook that reports the `Alt` release (following XKB
+options that move `Alt`, such as `altwin:swap_alt_win`, and ignoring an
+`AltGr`), and frosts the background behind the overlay. If another switcher binds `Alt`+`Tab`, remove
+its line, or keep it as the fallback for when Fathom is not installed:
+
+<details>
+<summary>The block with a fallback switcher</summary>
 
 ```lua
 -- fathom: begin. Alt+Tab is Fathom's; altswitch is the fallback.
@@ -102,35 +143,20 @@ do
   end
   local fathom = plugins .. "io.github.mtolhuys.fathom/hypr/fathom.lua"
   local fallback = plugins .. "io.github.pablo-merino.altswitch/altswitch.lua"
-  if not (exists(fathom) and pcall(dofile, fathom)) and exists(fallback) then
+  local ok, holds = false, false
+  if exists(fathom) then
+    ok, holds = pcall(dofile, fathom)
+  end
+  if not (ok and holds) and exists(fallback) then
     dofile(fallback)
   end
 end
 -- fathom: end.
 ```
 
-Hyprland reloads its config when the file is saved. After that, and after
-every `bash bin/dev-sync`, `bash bin/load-bindings --check` says who owns
-Alt+Tab. `bin/dev-sync` runs `bin/load-bindings` itself: when the installed
-snippet changed it reloads Hyprland's config, so the running bindings are
-always the installed ones.
+</details>
 
-For the current session only, without the block:
-
-```bash
-bash bin/load-bindings
-```
-
-Never load the snippet with a raw `hyprctl eval`: `bin/load-bindings` is the
-one way that refuses an unsafe snippet, loads it at most once per Hyprland
-Lua state, and checks that Hyprland is still the same process afterwards (see
-[docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md](docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md)).
-
-The snippet unbinds Omarchy's default `Alt`+`Tab` chords, binds them to
-Fathom, adds a raw key hook that reports the `Alt` release, and frosts the
-background behind the overlay.
-
-Without the Lua snippet, any Hyprland bind can drive Fathom through IPC:
+Without the snippet, any binding can drive Fathom over IPC:
 `omarchy-shell fathom hold 1` behaves like `Alt`+`Tab`,
 `omarchy-shell fathom release` like releasing `Alt`, and
 `omarchy-shell fathom open` opens the overview to browse with the keyboard.
@@ -148,15 +174,36 @@ omarchy-shell fathom captures   # which cards capture and which received a frame
 
 The full list is in [docs/SPEC.md](docs/SPEC.md#ipc).
 
-## Remove
-
-Remove the `fathom: begin` to `fathom: end` block (put back your previous
-switcher's `dofile` line if you had one), then:
+## Update
 
 ```bash
-hyprctl reload
+omarchy plugin update io.github.mtolhuys.fathom
+```
+
+A change to the bindings takes effect at the next config reload: save
+`~/.config/hypr/bindings.lua`, or run `hyprctl reload`.
+
+## Remove
+
+```bash
 omarchy plugin remove io.github.mtolhuys.fathom
 ```
+
+Then delete the `fathom: begin` to `fathom: end` block from
+`~/.config/hypr/bindings.lua` (put back your previous switcher's line if you
+had one). Hyprland reloads on save and `Alt`+`Tab` is Omarchy's again.
+
+## Troubleshooting
+
+- **`Alt`+`Tab` does nothing after `omarchy plugin disable`.** The bindings
+  follow the shell's plugin list at each config reload: save
+  `~/.config/hypr/bindings.lua` (or run `hyprctl reload`) and `Alt`+`Tab` is
+  Omarchy's again. Enabling works the same way.
+- **The overlay does not open.** `omarchy-shell fathom state` should answer;
+  if it does not, the plugin is not loaded (`omarchy plugin list`).
+  `load-bindings --check` (above) says who owns `Alt`+`Tab`.
+- **Your `Alt` is on another key.** Fathom reads `input:kb_options` at each
+  switch; tell us about a remap it misses.
 
 ## Development
 
@@ -164,9 +211,20 @@ omarchy plugin remove io.github.mtolhuys.fathom
 bash bin/test              # manifest, logic, Lua bindings, offscreen QML tests,
                            # qmllint, ShellCheck, `omarchy plugin validate`
 bash tests/qml/render.sh   # render the field offscreen into screenshots-local/
-bash bin/dev-sync          # install and enable the working tree, then bin/load-bindings
+bash bin/make-art          # the preview, the banner and the demo, from the QML
+bash bin/dev-sync          # install the working tree, stamped with its identity
+bash bin/dev-status        # is the running Fathom the working tree? (read-only)
 bash bin/load-bindings     # the only way to write to the running Hyprland (--check, --fresh)
 ```
+
+`bin/dev-sync` runs the tests, installs the working tree through `omarchy
+plugin add`, enables it and waits until exactly this build answers on IPC.
+When the installed snippet changed it reloads Hyprland's config through
+`bin/load-bindings`. Never load the snippet with a raw `hyprctl eval`:
+`bin/load-bindings` refuses an unsafe snippet, loads it at most once per
+Hyprland Lua state, and checks that Hyprland is still the same process
+afterwards (see
+[docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md](docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md)).
 
 The offscreen QML tests and renders need the Qt 6 `qmltestrunner` (package
 `qt6-declarative`). They run the real controller and view against stub

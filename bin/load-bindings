@@ -21,9 +21,10 @@
 set -euo pipefail
 
 readonly plugin_id="io.github.mtolhuys.fathom"
-readonly config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-readonly snippet="$config_home/omarchy/plugins/$plugin_id/hypr/fathom.lua"
-readonly bindings="$config_home/hypr/bindings.lua"
+# Omarchy installs plugins under $HOME whatever XDG_CONFIG_HOME says;
+# Hyprland reads its config from XDG_CONFIG_HOME.
+readonly snippet="$HOME/.config/omarchy/plugins/$plugin_id/hypr/fathom.lua"
+readonly bindings="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/bindings.lua"
 readonly crash_doc="docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md"
 
 fail() {

@@ -1,9 +1,10 @@
 import QtQuick
+import FathomTest
 
 // A capture "has content" when the fake Wayland handle says its frame is
 // ready. It then paints a plausible window (title bar, text lines) in the
 // handle's color, light or dark, so offscreen renders show what the layout
-// looks like.
+// looks like; a handle with a `kind` gets an illustrated app (MockApp).
 Item {
   id: view
 
@@ -16,9 +17,17 @@ Item {
   readonly property color face: captureSource && captureSource.color ? captureSource.color : "#20242a"
   readonly property bool lightFace: face.hslLightness > 0.6
 
+  Loader {
+    anchors.fill: parent
+    active: view.hasContent && !!(view.captureSource && view.captureSource.kind)
+    sourceComponent: MockApp {
+      kind: view.captureSource.kind
+    }
+  }
+
   Rectangle {
     anchors.fill: parent
-    visible: view.hasContent
+    visible: view.hasContent && !(view.captureSource && view.captureSource.kind)
     color: view.face
 
     Rectangle {

@@ -16,6 +16,9 @@ QtObject {
   // A stand-in desktop behind the field, blurred the way Hyprland blurs the
   // layer: "light", "dark", or "" for none (renders only).
   property string backdrop: ""
+  // The palette stand-in apps (MockApp) draw in: { dark, bg, surface, raised,
+  // fg, dim, faint, accent, colors: [...] }, or null for Tokyo Night.
+  property var appPalette: null
 
   function reset() {
     shortcuts = []
@@ -24,6 +27,7 @@ QtObject {
     surfaceWidth = 800
     surfaceHeight = 600
     backdrop = ""
+    appPalette = null
   }
 
   function registerShortcut(shortcut) {

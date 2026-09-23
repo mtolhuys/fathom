@@ -730,4 +730,15 @@ TestCase {
     }
     verify(!view.theme.light)
   }
+
+  // Alt+Tab opens one window deep: the focused window's card sits faded out
+  // behind the camera, still captured, and keeps a frame for the map.
+  function test_the_window_you_were_on_keeps_a_frame() {
+    const fathom = createFathom()
+    FakeSystem.press("fathom", "next")
+    tryVerify(function() { return fathom.revealed }, 1000)
+    verify(!fathom.fieldView.planeAt(0).visible, "its card has faded out behind the camera")
+    tryVerify(function() { return "a1" in fathom.snapshots }, 3000, "and still keeps a frame")
+    tryVerify(function() { return fathom.fieldView.map.tileFor(0).showsFrame }, 1000, "which the map shows")
+  }
 }

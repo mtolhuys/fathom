@@ -1,12 +1,29 @@
 -- Loads hypr/fathom.lua against a recording mock of Hyprland's `hl` table and
 -- checks what it binds, the submap it holds while Alt is down, what the raw
--- key hook forwards, and that a second load in the same Lua state is a no-op.
+-- key hook forwards (following XKB options that move Alt), that the overlay
+-- closing always leaves the submap, that a disabled Fathom takes nothing, and
+-- that a second load in the same Lua state is a no-op.
 --
 --   lua tests/lua/bindings.test.lua hypr/fathom.lua
 
 local path = arg[1] or "hypr/fathom.lua"
 
-local state = { submap = "", binds = {}, hooks = {}, unbind = {}, dispatch = {}, layer_rule = {}, calls = 0 }
+local function fresh()
+  return { submap = "", binds = {}, hooks = {}, unbind = {}, dispatch = {}, layer_rule = {}, calls = 0, config = {} }
+end
+local state = fresh()
+
+-- shell.json as the snippet reads it: nil for a missing file.
+local shell_json = '{ "plugins": [ { "id": "io.github.mtolhuys.fathom" } ] }'
+local real_open = io.open
+io.open = function(file, mode)
+  if tostring(file):match("/%.config/omarchy/shell%.json$") then
+    if shell_json == nil then return nil end
+    local text = shell_json
+    return { read = function() return text end, close = function() end }
+  end
+  return real_open(file, mode)
+end
 
 -- Hyprland 0.56.2 crashes (SIGSEGV in keybindRemove) when Lua removes a
 -- keybind it created earlier; see docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md.
@@ -52,6 +69,7 @@ local api = {
     defining = nil
   end,
   get_current_submap = function() return state.submap end,
+  get_config = function(key) return state.config[key] end,
   on = function(event, handler)
     return object(state.hooks, { event = event, handler = handler })
   end,
@@ -123,14 +141,14 @@ local function press(keys)
   return bind ~= nil
 end
 
-local function hook()
+local function hook(event)
   for _, item in ipairs(state.hooks) do
-    if item.active then return item.handler end
+    if item.active and item.event == (event or "input.keyboard.key") then return item.handler end
   end
   return function() end
 end
 
-dofile(path)
+check(dofile(path) == true, "a load that binds says so")
 
 check(#state.unbind == 2 and state.unbind[1] == "ALT + TAB" and state.unbind[2] == "ALT + SHIFT + TAB",
   "clears both default Alt-Tab chords")
@@ -187,11 +205,66 @@ check(state.teardown == nil, "no load ever tears down a Hyprland object"
 -- A fresh Lua state (hyprctl reload) loads it again; a submap Hyprland refuses
 -- to define leaves Alt+Tab working without one.
 _G.__fathom = nil
-state = { submap = "", binds = {}, hooks = {}, unbind = {}, dispatch = {}, layer_rule = {}, calls = 0 }
+state = fresh()
+local define_submap = api.define_submap
 api.define_submap = function() error("cannot define") end
 dofile(path)
 press("ALT + TAB")
 check(sent({ "fathom:next" }) and state.submap == "", "without a submap Alt+Tab still opens and holds no submap")
+hook()(64, 0, RELEASED)
+check(sent({ "fathom:next", "fathom:release" }), "and releasing Alt still commits")
+api.define_submap = define_submap
+
+-- The overlay closing on its own (Escape, a click, the watchdog, a release
+-- only the overlay saw) always leaves the submap, and forwards nothing.
+local function reload()
+  _G.__fathom = nil
+  state = fresh()
+  return dofile(path)
+end
+reload()
+press("ALT + TAB")
+hook("layer.closed")({ namespace = "other" })
+check(state.submap == "fathom", "another layer closing changes nothing")
+hook("layer.closed")({ namespace = "fathom" })
+check(state.submap == "" and sent({ "fathom:next" }), "the overlay closing leaves the submap and forwards nothing")
+hook()(64, 0, RELEASED)
+check(sent({ "fathom:next" }), "a release after the overlay closed is ignored")
+hook()(64, 0, PRESSED)
+hook()(64, 0, RELEASED)
+check(sent({ "fathom:next" }), "and so is the next Alt tap")
+
+-- XKB options that move Alt move the release with it.
+reload()
+state.config["input.kb_options"] = "compose:caps, altwin:swap_alt_win"
+press("ALT + TAB")
+hook()(64, 0, RELEASED)
+check(state.submap == "fathom", "with Alt and Super swapped, the physical Alt key (now Super) does not commit")
+hook()(133, 0, RELEASED)
+check(state.submap == "" and sent({ "fathom:next", "fathom:release" }), "the physical Super key (now Alt) does")
+state.config["input.kb_options"] = "ctrl:swap_lalt_lctl"
+press("ALT + TAB")
+hook()(37, 0, RELEASED)
+check(state.submap == "", "with Alt and Ctrl swapped, the physical Ctrl key commits")
+state.config["input.kb_options"] = "grp:alts_toggle"
+state.config["input.kb_variant"] = "intl"
+press("ALT + TAB")
+hook()(108, 0, RELEASED)
+check(state.submap == "fathom", "on an intl layout, letting go of AltGr does not commit")
+hook()(64, 0, RELEASED)
+check(state.submap == "", "the left Alt still does")
+state.config["input.kb_variant"] = nil
+state.config["input.kb_options"] = { "not a string" }
+press("ALT + TAB")
+hook()(64, 0, RELEASED)
+check(state.submap == "", "odd settings fall back to the Alt keys")
+
+-- A disabled or removed Fathom takes nothing: Omarchy's Alt+Tab stays.
+shell_json = '{ "plugins": [ { "id": "someone.else" } ] }'
+check(reload() == false and state.calls == 0 and rawget(_G, "__fathom") == nil,
+  "without Fathom in shell.json the snippet makes no call and says so")
+shell_json = nil
+check(reload() == true and active("")["ALT + TAB"] ~= nil, "a shell.json that cannot be read counts as enabled")
 
 if failures > 0 then
   os.exit(1)

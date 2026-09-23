@@ -17,7 +17,9 @@ project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 readonly project_root
 readonly cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/fathom"
 readonly snapshot_dir="$cache_root/development-source"
-readonly installed_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/$plugin_id"
+# Where `omarchy plugin add` puts it: always under $HOME, whatever
+# XDG_CONFIG_HOME says.
+readonly installed_dir="$HOME/.config/omarchy/plugins/$plugin_id"
 
 fail() {
   printf 'dev-sync: %s\n' "$*" >&2
@@ -75,7 +77,11 @@ while IFS= read -r -d '' tracked_path; do
   rm -f -- "$snapshot_dir/$tracked_path"
 done < <(git -C "$snapshot_dir" ls-files -z)
 
-tar -C "$project_root" --exclude='./.git' -cf - . | tar -C "$snapshot_dir" -xf -
+# The files a clone would carry: tracked and untracked, never ignored (the
+# same set bin/build-identity hashes).
+(cd -- "$project_root" && git ls-files -z --cached --others --exclude-standard \
+  | while IFS= read -r -d '' path; do [[ -f $path ]] && printf '%s\0' "$path"; done \
+  | tar --null -T - -cf -) | tar -C "$snapshot_dir" -xf -
 sed -i "s|buildIdentity: \"$source_identity\"|buildIdentity: \"$expected_identity\"|" "$snapshot_dir/src/Fathom.qml"
 grep -qF "buildIdentity: \"$expected_identity\"" "$snapshot_dir/src/Fathom.qml" \
   || fail "could not stamp the build identity into the snapshot"

@@ -17,6 +17,6 @@ base=$(sed -n 's/^[[:space:]]*readonly property string buildIdentity: "\([^"+]*\
 hash=$(cd -- "$project_root" \
   && git ls-files -z --cached --others --exclude-standard \
   | while IFS= read -r -d '' path; do [[ -f $path ]] && printf '%s\0' "$path"; done \
-  | sort -z | xargs -0 -r sha256sum -- | sha256sum | cut -c1-12)
+  | LC_ALL=C sort -z | xargs -0 -r sha256sum -- | sha256sum | cut -c1-12)
 
 printf '%s+%s\n' "$base" "$hash"
