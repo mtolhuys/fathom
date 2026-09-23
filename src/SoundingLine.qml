@@ -33,15 +33,19 @@ Item {
     for (let i = 0; i < controller.order.length; i++) list.push(controller.field[controller.order[i]])
     return list
   }
+  readonly property real markStep: markSize + 2 * unit
+  readonly property real marksX: lineX + 8 * unit
+  // As many marks per row as fit, leaving room for a "+N".
+  readonly property int maxColumns: Math.max(1, Math.floor((width - marksX - 18 * textUnit) / markStep))
   readonly property var marks: {
     const depths = []
     for (let i = 0; i < shown.length; i++) depths.push(shown[i] ? shown[i].depth : 0)
-    return Layout.soundingMarks(depths, lineTop, lineBottom, markSize * 1.3)
+    return Layout.soundingMarks(depths, lineTop, lineBottom, markSize * 1.3, maxColumns)
   }
 
   function pick(x, y) {
     if (!gauge.controller || !gauge.marks.length) return
-    const column = Math.max(0, Math.round((x - gauge.lineX - 10 * gauge.unit) / (gauge.markSize + 2 * gauge.unit)))
+    const column = Math.max(0, Math.round((x - gauge.marksX - gauge.markSize / 2) / gauge.markStep))
     const at = Layout.nearestMark(gauge.marks, y, column)
     const entry = at >= 0 ? gauge.shown[at] : null
     if (entry) gauge.controller.jumpTo(entry.index)
@@ -109,15 +113,27 @@ Item {
       readonly property var entry: gauge.shown[index] || null
       readonly property bool selected: gauge.controller !== null && entry !== null && entry.index === gauge.controller.selectedIndex
 
-      x: gauge.lineX + 8 * gauge.unit + modelData.column * (gauge.markSize + 2 * gauge.unit)
+      x: gauge.marksX + modelData.column * gauge.markStep
       y: modelData.y - height / 2
       width: gauge.markSize
       height: width
       radius: width / 2
-      visible: x + width < gauge.width
+      visible: !modelData.hidden
       color: selected ? Color.accent : (entry && entry.estimated ? "transparent" : Qt.alpha(Color.foreground, 0.6))
       border.width: entry && entry.estimated && !selected ? 1 : 0
       border.color: Qt.alpha(Color.foreground, 0.5)
+
+      // More windows at this depth than the row can show.
+      Text {
+        anchors.left: parent.right
+        anchors.leftMargin: 3 * gauge.unit
+        anchors.verticalCenter: parent.verticalCenter
+        visible: mark.modelData.more > 0
+        color: Color.muted
+        font.family: Style.font.family
+        font.pixelSize: 9 * gauge.textUnit
+        text: "+" + mark.modelData.more
+      }
     }
   }
 

@@ -445,6 +445,11 @@ test('the sounding line reads depth from the surface down', () => {
   assert.equal(Layout.nearestMark(marks, 150, 2), 3);
   assert.equal(Layout.nearestMark(marks, 490, 0), 4);
   assert.equal(Layout.nearestMark([], 100, 0), -1);
+  // A crowded depth shows what fits and counts the rest.
+  const crowded = Layout.soundingMarks([8, 8, 8, 8, 8, 1], 100, 500, 6, 3);
+  assert.deepEqual(Array.from(crowded, (m) => m.hidden), [false, false, false, true, true, false]);
+  assert.equal(crowded[2].more, 2);
+  assert.equal(Layout.nearestMark(crowded, 500, 4), 2, 'a hidden mark cannot be picked');
 });
 
 test('the gauge marks fathoms in time, the caption reads them', () => {
@@ -516,4 +521,7 @@ test('map cards follow their aspect and shrink together when the row is full', (
   const total = full.widths.reduce((a, b) => a + b, 0) + 30;
   assert.ok(total <= 500 + 1e-6);
   assert.ok(full.height < 100);
+  // Sixteen workspaces never run past the edge, whatever the minimum width.
+  const crowded = Layout.mapCards(new Array(16).fill(1.6), 1300, 100, 10, 16, 90);
+  assert.ok(crowded.widths.reduce((a, b) => a + b, 0) + 150 <= 1300 + 1e-6);
 });

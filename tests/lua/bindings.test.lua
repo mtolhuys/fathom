@@ -138,7 +138,18 @@ check(#state.layer_rule == 1 and state.layer_rule[1].match.namespace == "^fathom
   and state.layer_rule[1].no_anim == true and state.layer_rule[1].blur == true,
   "the fathom layer shows at once, over a blurred background")
 
--- Loading the file a second time replaces the first load.
+-- Loading the file a second time replaces the first load, even when Hyprland
+-- refuses to define the submap again: Alt+Tab keeps working, the release hook
+-- is still there, and no submap is entered that nothing would leave.
+local define = hl.define_submap
+hl.define_submap = function() error("submap exists") end
+dofile(path)
+hl.define_submap = define
+state.dispatch = {}
+press("ALT + TAB")
+check(sent({ "fathom:next" }) and state.submap == "", "without a submap Alt+Tab still opens and holds no submap")
+hook()(64, 0, 0)
+state.submap = ""
 dofile(path)
 local hooks = 0
 for _, item in ipairs(state.hooks) do if item.active then hooks = hooks + 1 end end

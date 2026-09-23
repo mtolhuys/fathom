@@ -451,8 +451,10 @@ Item {
     focus: true
 
     Keys.onPressed: event => {
-      if (view.controller)
-        event.accepted = view.controller.handleKey(event.key, event.modifiers, event.text)
+      if (!view.controller) return
+      // Any key counts as activity for the hold-mode watchdog.
+      view.controller.noteInput()
+      event.accepted = view.controller.handleKey(event.key, event.modifiers, event.text)
     }
 
     // The Alt press predates this surface, but its release arrives here once
@@ -463,6 +465,16 @@ Item {
         event.accepted = true
       }
     }
+  }
+
+  // Until the field is drawn (the first 90 ms of a hold), a click or a wheel
+  // turn must not land on something the user cannot see.
+  MouseArea {
+    anchors.fill: parent
+    z: 10000
+    visible: view.controller !== null && view.controller.opened && !view.controller.revealed
+    acceptedButtons: Qt.AllButtons
+    onWheel: wheel => wheel.accepted = true
   }
 
   FrameProbe {

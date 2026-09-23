@@ -46,7 +46,7 @@ end
 local function chord(name)
   return function()
     send(name)
-    if hl.get_current_submap() ~= "fathom" then
+    if fathom.submap and hl.get_current_submap() ~= "fathom" then
       hl.dispatch(hl.dsp.submap("fathom"))
     end
   end
@@ -57,20 +57,14 @@ local function bind_chords()
   remember(hl.bind("ALT + SHIFT + TAB", chord("previous"), { description = "Fathom: rise one window", repeating = true }))
 end
 
--- Omarchy binds ALT+TAB several times by default (cyclenext and bring_to_top,
--- both directions); unbinding the chords clears all of them.
-hl.unbind("ALT + TAB")
-hl.unbind("ALT + SHIFT + TAB")
-bind_chords()
-hl.define_submap("fathom", bind_chords)
-
 -- Releasing Alt commits the selection. A release bind on a bare modifier only
 -- fires when that modifier was tapped on its own, so the raw key stream is
 -- read instead (the approach of the altswitch plugin). The release is also
 -- seen when Alt is let go before the overlay has keyboard focus.
 --
 -- 64 is Alt_L and 108 is Alt_R. This runs for every key event, so outside a
--- switch it stays at a table lookup and a string comparison.
+-- switch it stays at a table lookup and a string comparison. It is set up
+-- before anything else that could fail on a reload.
 local FATHOM_ALT_KEYCODES = { [64] = true, [108] = true }
 
 fathom.hook = hl.on("input.keyboard.key", function(keycode, _, state)
@@ -79,6 +73,17 @@ fathom.hook = hl.on("input.keyboard.key", function(keycode, _, state)
     send("release")
   end
 end)
+
+-- Omarchy binds ALT+TAB several times by default (cyclenext and bring_to_top,
+-- both directions); unbinding the chords clears all of them.
+hl.unbind("ALT + TAB")
+hl.unbind("ALT + SHIFT + TAB")
+bind_chords()
+
+-- The submap is optional: when it cannot be (re)defined, Alt+Tab still works
+-- and simply does not hold the other Alt chords. The release hook above is
+-- already in place either way, so the submap can never be left behind.
+fathom.submap = pcall(hl.define_submap, "fathom", bind_chords)
 
 -- Show the field at once instead of fading the layer in, and frost what is
 -- behind it. Created once per session: a layer rule cannot be removed.

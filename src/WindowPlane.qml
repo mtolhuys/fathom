@@ -69,14 +69,16 @@ Item {
   readonly property bool showsSnapshot: !capture.hasContent && snapshot !== null
 
   // Keeps the frame a moment after it arrives (the first one can be partial).
+  // The grab is of what the card draws (the clipped frame), which is always
+  // a visible item; the fog and the badge sit outside it.
   function takeSnapshot() {
     if (!capture.hasContent || !controller || !controller.opened || !entry || !visible) return
-    const source = capture.sourceSize
-    const width = Math.max(1, Math.min(controller.snapshotWidth, source.width))
-    const height = Math.max(1, Math.round(width * source.height / Math.max(1, source.width)))
+    if (!controller.wantsSnapshot(entry.address)) return
+    const width = Math.max(1, Math.min(controller.snapshotWidth, capture.sourceSize.width))
+    const height = Math.max(1, Math.round(width * frame.height / Math.max(1, frame.width)))
     const address = entry.address
     const target = controller
-    capture.grabToImage(result => target.keepSnapshot(address, result), Qt.size(width, height))
+    frame.grabToImage(result => target.keepSnapshot(address, result), Qt.size(width, height))
   }
 
   x: geometry.x - geometry.width / 2
@@ -248,41 +250,42 @@ Item {
         live: card.capturing
         paintCursor: false
       }
+    }
 
-      // Depth: older and further windows sink into the backdrop.
-      Rectangle {
-        anchors.fill: parent
-        color: Color.background
-        opacity: card.fog
-        visible: opacity > 0.005
-      }
+    // Depth: older and further windows sink into the backdrop.
+    Rectangle {
+      anchors.fill: frame
+      radius: frame.radius
+      color: Color.background
+      opacity: card.fog
+      visible: opacity > 0.005
+    }
 
-      // A still frame says so, and how old it is.
-      Rectangle {
-        anchors.left: parent.left
-        anchors.bottom: parent.bottom
-        anchors.margins: 8 * card.unit * card.depthScale + 2
-        visible: card.showsSnapshot && frame.height > 70 * card.unit
-        width: badgeText.implicitWidth + 14 * card.unit
-        height: badgeText.implicitHeight + 6 * card.unit
-        radius: height / 2
-        color: Qt.alpha(Color.background, 0.82)
-        border.width: 1
-        border.color: Qt.alpha(Color.foreground, 0.16)
+    // A still frame says so, and how old it is.
+    Rectangle {
+      anchors.left: frame.left
+      anchors.bottom: frame.bottom
+      anchors.margins: 8 * card.unit * card.depthScale + 2
+      visible: card.showsSnapshot && frame.height > 70 * card.unit
+      width: badgeText.implicitWidth + 14 * card.unit
+      height: badgeText.implicitHeight + 6 * card.unit
+      radius: height / 2
+      color: Qt.alpha(Color.background, 0.82)
+      border.width: 1
+      border.color: Qt.alpha(Color.foreground, 0.16)
 
-        Text {
-          id: badgeText
+      Text {
+        id: badgeText
 
-          anchors.centerIn: parent
-          color: Color.muted
-          font.family: Style.font.family
-          font.pixelSize: Math.max(9, 11 * card.textUnit * Math.max(0.8, card.depthScale))
-          text: {
-            const snapshot = card.snapshot
-            if (!snapshot || !card.controller) return ""
-            const seconds = Math.max(0, (card.controller.openedAtMs - snapshot.takenAt) / 1000)
-            return "last seen " + Field.ageLabel(seconds, false, false)
-          }
+        anchors.centerIn: parent
+        color: Color.muted
+        font.family: Style.font.family
+        font.pixelSize: Math.max(9, 11 * card.textUnit * Math.max(0.8, card.depthScale))
+        text: {
+          const snapshot = card.snapshot
+          if (!snapshot || !card.controller) return ""
+          const seconds = Math.max(0, (card.controller.openedAtMs - snapshot.takenAt) / 1000)
+          return "last seen " + Field.ageLabel(seconds, false, false)
         }
       }
     }

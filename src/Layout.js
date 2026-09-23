@@ -121,34 +121,45 @@ function soundingY(depth, top, bottom) {
 }
 
 // One mark per window: its y on the gauge and a column, so windows at nearly
-// the same depth sit side by side instead of on top of each other.
-function soundingMarks(depths, top, bottom, spacing) {
+// the same depth sit side by side instead of on top of each other. Beyond
+// `maxColumns` a mark is hidden, and the last visible mark of the row counts
+// them (`more`), so a crowded depth says how crowded it is.
+function soundingMarks(depths, top, bottom, spacing, maxColumns) {
     var list = depths || [];
     var gap = spacing > 0 ? spacing : 6;
+    var limit = maxColumns > 0 ? Math.floor(maxColumns) : Infinity;
     var marks = [];
     var rows = [];
     for (var i = 0; i < list.length; i++) {
         var y = soundingY(list[i], top, bottom);
-        var column = 0;
+        var row = null;
         for (var j = 0; j < rows.length; j++) {
             if (Math.abs(rows[j].y - y) < gap) {
-                column = rows[j].count;
-                rows[j].count++;
-                y = rows[j].y;
+                row = rows[j];
                 break;
             }
         }
-        if (j === rows.length) rows.push({ y: y, count: 1 });
-        marks.push({ y: y, column: column });
+        if (!row) {
+            row = { y: y, count: 0, last: -1 };
+            rows.push(row);
+        }
+        var column = row.count;
+        row.count++;
+        var hidden = column >= limit;
+        var mark = { y: row.y, column: column, hidden: hidden, more: 0 };
+        if (hidden) marks[row.last].more++;
+        else row.last = marks.length;
+        marks.push(mark);
     }
     return marks;
 }
 
-// The mark nearest a point on the gauge, by depth first, then by column.
+// The visible mark nearest a point on the gauge, by depth first, then by column.
 function nearestMark(marks, y, column) {
     var best = -1;
     var bestScore = Infinity;
     for (var i = 0; i < (marks || []).length; i++) {
+        if (marks[i].hidden) continue;
         var score = Math.abs(marks[i].y - y) * 4 + Math.abs(marks[i].column - (column || 0));
         if (score < bestScore) {
             bestScore = score;
@@ -284,6 +295,16 @@ function mapCards(aspects, available, height, gap, chrome, minWidth) {
     }
     total += gap * Math.max(0, list.length - 1);
     var scale = total > available && total > 0 ? (available - gap * Math.max(0, list.length - 1)) / (total - gap * Math.max(0, list.length - 1)) : 1;
-    for (var j = 0; j < widths.length; j++) widths[j] = Math.max(minWidth || 0, widths[j] * scale);
+    var used = 0;
+    for (var j = 0; j < widths.length; j++) {
+        widths[j] = Math.max(minWidth || 0, widths[j] * scale);
+        used += widths[j];
+    }
+    // The minimum can push the row past the edge again; then everything
+    // shrinks to fit, minimum or not.
+    var room = available - gap * Math.max(0, list.length - 1);
+    if (used > room && used > 0) {
+        for (var k = 0; k < widths.length; k++) widths[k] *= Math.max(0, room) / used;
+    }
     return { widths: widths, height: height * Math.min(1, Math.max(scale, 0.55)), scale: scale };
 }

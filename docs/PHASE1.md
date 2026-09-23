@@ -17,6 +17,8 @@ open (see the open question in [SPEC.md](SPEC.md)).
 | The view: backdrop, the Deep, caption, filter, hints, keys, wheel, pointer gate | `src/FieldView.qml` |
 | One card: header, fitted capture, fog, rings, placeholder | `src/WindowPlane.qml` |
 | The map and its workspace cards with minimaps | `src/WorkspaceMap.qml`, `src/WorkspaceCard.qml` |
+| The sounding line (depth gauge in fathoms) | `src/SoundingLine.qml` |
+| Last-seen snapshots, in memory | `src/Fathom.qml`, `src/WindowPlane.qml` |
 | App icons with a lettered fallback | `src/AppIcon.qml` |
 | Bindings: the `fathom` submap, the Alt release hook, reload, blur | `hypr/fathom.lua` |
 | Offscreen renders for design review | `tests/qml/render.sh`, `tests/qml/render/tst_render.qml` |
@@ -35,6 +37,14 @@ open (see the open question in [SPEC.md](SPEC.md)).
   Left and Right move between workspaces, digits jump to one, letters filter,
   Space keeps the field open. A Hyprland submap keeps the user's own Alt
   chords out of the way only while a switch is in progress.
+- **The sounding line.** The name's instrument: a gauge in fathoms (now at the
+  surface, two hours at eight fathoms) with a dot per window and the sounding
+  lead at the selection; dragging along it scrubs through time. The light
+  fades as you dive.
+- **No blank cards.** Hyprland does not render windows outside their
+  monitor's area (a scrolling layout parks them there), so they never
+  deliver a frame. Cards show the last frame Fathom saw of them, with its age,
+  or say they are off screen.
 - **No flash, no lag.** A quick Alt+Tab never draws the field; the focus
   request goes out the moment Hyprland gives focus back after the grab.
 - **Honest.** Ages seeded from Hyprland's focus order read "earlier"; windows
@@ -45,17 +55,20 @@ open (see the open question in [SPEC.md](SPEC.md)).
 
 `bin/test` runs all of these; they pass.
 
-- Logic (node, 33 tests): fog; recency with estimated ages; the field's
+- Logic (node, 38 tests): fog; recency with estimated ages; the field's
   filter, visible order, stepping (Tab wraps, arrows stop), reselection,
   workspace groups and neighbors, digits, wheel steps, labels; the card
   stack (every card shows a header strip of at least 24 px and a band on
   the right, the stack is centered and stays on screen, the camera is
-  continuous); fitting; minimaps (whole scrolling strips, tab groups, grid
-  fallback); map card widths.
+  continuous, the stage leaves room for the gauge); fitting; minimaps (whole
+  scrolling strips, tab groups, grid fallback); off-screen detection; map
+  card widths, never wider than the screen; the sounding line (depth to y,
+  side-by-side marks, "+N", nearest visible mark, fathom labels).
 - Bindings (Lua, mocked `hl` with submaps): the chords, the submap holding only
   those chords, entering it once, leaving it and sending the release on either
-  Alt, the blurred layer rule, and a second load replacing the first.
-- QML (qmltestrunner, 37 tests): everything Phase 0 covered, plus arrows with
+  Alt, the blurred layer rule, a second load replacing the first, and a reload
+  that cannot redefine the submap still working without one.
+- QML (qmltestrunner, 42 tests): everything Phase 0 covered, plus arrows with
   and without Alt, Home, End, PageDown, workspace left and right, digits,
   typing to filter (digits join a filter, Enter with no match does nothing,
   the first Escape clears), Alt+letters filtering while holding, releasing
@@ -63,12 +76,23 @@ open (see the open question in [SPEC.md](SPEC.md)).
   pixels, a window closing mid-switch (by event and by the toplevel list), no
   focus request for a window gone before it, no drawing on a quick Alt+Tab,
   map hover selecting only after the pointer moves, the map's groups, focus on
-  Hyprland's restore event, and caption and filter pill clicks.
+  Hyprland's restore event, caption and filter pill clicks, snapshots (kept,
+  shown with the parked state, not retaken while fresh, dropped with their
+  window, also without an event), Space between filter words, clicks before
+  the field is drawn, and picking on the sounding line with the lead
+  following.
 - `qmllint` against the stubs, with no warnings; ShellCheck; `omarchy plugin
   validate`.
 - Offscreen renders (`bash tests/qml/render.sh`) of 3, 10, 15, 40 windows, a
-  filter, no match, an uncapturable selection, a 1366x768 screen and the
-  scrolling layout of the machine it was designed on, reviewed by eye.
+  filter, no match, an uncapturable selection, a 1366x768 screen, the
+  scrolling layout of the machine it was designed on, a snapshot and a window
+  never seen, reviewed by eye.
+- A review of everything since Phase 0 (`/code-review high`) found ten issues,
+  all fixed: a Lua reload that could leave the submap behind, snapshots
+  retaken on every open, snapshots outliving windows gone without an event,
+  Space pinning mid-filter, the map row overflowing, hidden gauge marks being
+  pickable, clicks landing before the field was drawn, no-op keys not
+  counting for the watchdog, grabbing a hidden effect source, and these docs.
 
 ## Verified on the device
 

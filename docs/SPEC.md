@@ -12,8 +12,9 @@ v1 is an overlay only: no real window moves.
 
 Status: 0.2.0. Phase 0 (0.1.0, see [PHASE0.md](PHASE0.md)) proved the
 mechanics; Phase 1 (0.2.0, see [PHASE1.md](PHASE1.md)) is the product: the
-card layout, the workspace map, fog, background blur, the wheel, arrows and
-the filter. Mouse parallax is still open.
+card layout, the sounding line, the workspace map, fog, background blur,
+last-seen snapshots, the wheel, arrows and the filter. Mouse parallax is still
+open.
 
 Rules marked **(kickstart)** come from the original brief. Rules marked
 **(decision)** were settled while building and can be revisited. Rules marked
@@ -26,6 +27,9 @@ Rules marked **(kickstart)** come from the original brief. Rules marked
 - **Card**: one window in the Deep, drawn from a live capture.
 - **The map** (the Surface): one card per workspace, with a minimap of its
   windows.
+- **The sounding line**: the depth gauge beside the Deep.
+- **Fathom**: the unit of depth; a window `d` fathoms down lost focus
+  `30 * (2^d - 1)` seconds ago.
 - **Depth**: a window's distance on the z-axis, derived from time since focus.
 - **Camera**: the viewer's position in the stack. It sits on the selection.
 - **Selection**: the card at the camera. It gets the accent ring.
@@ -121,10 +125,43 @@ whatever the windows' own shapes are.
 - The camera animates between cards in 220 ms (OutCubic).
 - Captures run only for cards near the camera (from one step passed to the
   last visible card) and only while the field is open.
-- A window that cannot be captured (a scrolling layout parks windows beside
-  the screen and Hyprland does not render them) shows its app icon and name
-  instead of an empty frame.
+- Hyprland renders a window for capture only while it lies within its
+  monitor's area, so windows a scrolling layout parks beside the screen never
+  deliver a frame (seen on the device; not a matter of minimizing, which
+  Hyprland does not have). Each card therefore keeps the last frame it saw
+  while the field was open: a snapshot of what the card drew, 400 ms after the
+  first frame, at most 640 px wide, not taken again while younger than 30 s.
+  When no live frame comes, the card shows its snapshot with a "last seen
+  12 min ago" badge; a window never seen shows its app icon and name and says
+  "off screen · no live preview". **(owner, decision)**
+- Snapshots live in the shell's memory only, never on disk: at most 24
+  windows, oldest dropped first, and a window's snapshot goes when the window
+  does (on `closewindow`, or when it leaves Hyprland's toplevel list, because
+  Hyprland reuses addresses). **(decision)**
 - Urgent windows (Hyprland's urgent flag) get a red ring and dot.
+
+## The sounding line **(owner: "earn the name", decision)**
+
+A fathom is a unit of water depth, and depth is what Fathom measures. The
+sounding line reads it the way a lead line reads water.
+
+- A vertical gauge left of the Deep, from the surface (depth 0, "now", marked
+  with ≈) down to 8 fathoms ("2h+"), with a mark per fathom labelled with the
+  time it stands for: now, 30s, 1m, 3m, 7m, 15m, 31m, 1h, 2h+.
+- Every window shown is a dot at its depth; windows at nearly the same depth
+  sit side by side, and a row that does not fit ends in "+N". A window whose
+  time is only an estimate (seeded at startup) is a hollow dot.
+- The sounding lead (an accent diamond on an accent line from the surface)
+  hangs at the selection's depth and descends as you dive, animated in
+  260 ms.
+- A click, or a drag, along the gauge selects the visible window nearest that
+  depth: scrubbing through time.
+- The light fades as you dive: a soft light from the top of the screen dims
+  and the whole scene darkens (3.5 % per fathom) with the selection's depth.
+- The caption reads the depth ("2.3 fathoms"; "at the surface" when just
+  used; nothing for the focused window or an estimate).
+- Shown when the screen is at least 1000 px wide; the Deep is laid out to its
+  right.
 
 ## The map **(owner, decision)**
 
@@ -157,7 +194,8 @@ named ones, then scratchpads.
 | 1 to 9 | the most recent window of that workspace | same, until a filter is typed |
 | letters, digits after a letter | filter | filter |
 | Backspace, Ctrl+Backspace | edit, clear the filter | same |
-| Space | keep the field open after Alt (switch to browse) | a space in the filter |
+| Space | a space in the filter; with no filter, keep the field open after Alt (switch to browse) | a space in the filter |
+| click or drag on the sounding line | the window at that depth | same |
 | Enter, a click on a card, the caption or a map window | focus it | same |
 | Escape | clear the filter, else close without focusing | same |
 | click on empty space | close without focusing | same |
@@ -178,8 +216,9 @@ named ones, then scratchpads.
   pointer. **(decision)**
 - Wheel notches step one window; touchpad pixels add up (60 px per window).
 - Hold mode needs at least two windows; browse needs one.
-- Watchdog: in hold mode, 15 s without input (keys, wheel, pointer movement)
-  closes the field without focusing, in case an Alt release is ever missed.
+- Watchdog: in hold mode, 15 s without input (any key, the wheel, pointer
+  movement) closes the field without focusing, in case an Alt release is ever
+  missed.
 
 ### How input reaches the plugin
 
@@ -202,7 +241,9 @@ the `fathom` submap. The overlay also sees the Alt release itself. Every
 handler is idempotent, so two releases focus once.
 
 The snippet can be loaded again: it removes the binds and the hook of the
-previous load first.
+previous load first, sets up the release hook before anything else, and
+treats the submap as optional, so a reload that cannot redefine it leaves
+Alt+Tab working and never enters a submap nothing would leave.
 
 ## Focusing **(kickstart, adapted)**
 
@@ -233,7 +274,8 @@ pointer. To confirm.
 
 - 60 fps target on integrated graphics.
 - Captures exist only while the field is open, and only for cards near the
-  camera; the map draws icons, not captures.
+  camera; the map draws icons, not captures. Snapshots are grabbed at most once
+  per window per 30 s.
 - Per-card blur (the brief's `blur = depth * 6 px`) is not used: the fog
   carries depth, and the compositor's layer blur frosts the background once.
 - The frame probe (a `FrameAnimation` plus the window's `frameSwapped` count)
@@ -245,7 +287,8 @@ pointer. To confirm.
   group tab activation) is the only write to windows. The Lua snippet also
   switches Hyprland's submap while Alt is held, and adds one layer rule.
 - No network, no daemon, no root. The plugin writes no files and starts no
-  programs (`tests/static.test.sh` holds that line).
+  programs (`tests/static.test.sh` holds that line). The only window content
+  that outlives a switch is the snapshots, in memory.
 - The exclusive keyboard grab lasts only while the field is open, and Escape,
   a click, the Alt release and the watchdog all close it.
 - All code and identifiers in English.
@@ -273,9 +316,9 @@ corner radii from Hyprland's rounding. The backdrop is the theme background at
 | `pin` | Keep the field open after Alt (switch to browse) |
 | `release` | Same as releasing Alt |
 | `commit` / `cancel` | Focus the selection / close without focusing |
-| `state` | JSON: build identity, open, revealed, mode, counts, filter, Lua config |
+| `state` | JSON: build identity, open, revealed, mode, counts, filter, snapshots kept, Lua config |
 | `field` | JSON: every window with app, workspace, age, depth and fog |
-| `captures` | JSON: per card, whether it captures, whether a frame arrived, whether its workspace is on screen |
+| `captures` | JSON: per card, whether it captures, whether a frame arrived, whether it shows a snapshot, whether it is parked off screen, whether its workspace is on screen |
 | `bench <seconds>` | Open, dive every 250 ms with the frame probe on, close |
 | `stats` | JSON: last bench's frame times and time to first frame |
 

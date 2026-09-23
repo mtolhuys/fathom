@@ -24,7 +24,17 @@ the one you pick is the only thing it asks the compositor to do.
   its windows at their real positions, each with its app icon. You see which
   workspace is on screen, which window is focused, which one wants your
   attention, and what a scrolling layout has parked beside the screen.
-- **The caption.** The selection's title, app, workspace and age.
+- **The sounding line.** A depth gauge beside the stack, marked in fathoms from
+  "now" at the surface to two hours down. Every window is a dot at its depth,
+  and the sounding lead hangs at the one you are on, descending as you dive;
+  the light fades with it. Click or drag along the line to pick a window by
+  how long ago you used it.
+- **The caption.** The selection's title, app, workspace, age and depth.
+
+A window your scrolling layout parks beside the screen cannot be captured
+(Hyprland does not render it). Fathom shows the last frame it saw of that
+window, marked "last seen", or says it is off screen. Those frames stay in
+memory only.
 
 ## Keys
 
@@ -38,8 +48,9 @@ Hold `Alt` while you use these; release `Alt` to focus the selection.
 | `→` / `←`, sideways wheel | The most recent window of the next / previous workspace |
 | `1` to `9` | The most recent window on that workspace |
 | `Home` / `End`, `PageDown` / `PageUp` | Front / back, five windows |
-| Type letters | Filter by app, title or workspace |
+| Type letters | Filter by app, title or workspace (`Space` between words) |
 | `Space` | Keep the field open after you release `Alt` |
+| Click or drag on the sounding line | The window at that depth |
 | `Enter`, a click on a window or the caption | Focus it |
 | `Escape` | Clear the filter, or close without focusing |
 | Click on empty space | Close without focusing |
@@ -145,7 +156,8 @@ of omakit's blocks; `DEVELOPMENT.md` says what happens if that ever changes.
 
 - Windows opened while the field is open join the next switch.
 - A scrolling layout's windows parked beside the screen cannot be captured
-  (Hyprland does not render them); they show their app icon.
+  live (Hyprland does not render them); they show their last seen frame, or
+  their app icon until Fathom has seen them.
 - The recency map starts over when the shell restarts (Fathom writes no
   files); it is seeded from Hyprland's focus order.
 - Mouse parallax is not built yet.

@@ -293,6 +293,28 @@ Item {
     return true
   }
 
+  // A snapshot younger than this is not taken again: a grab reads the frame
+  // back from the GPU, and doing that for every card on every Alt+Tab is waste.
+  readonly property int snapshotFreshMs: 30000
+
+  function wantsSnapshot(address) {
+    const kept = root.snapshots[Recency.normalizeAddress(address)]
+    return !kept || Date.now() - kept.takenAt > root.snapshotFreshMs
+  }
+
+  // Snapshots of windows that no longer exist go, even when the closewindow
+  // event was missed: Hyprland reuses addresses.
+  function sweepSnapshots() {
+    const keys = Object.keys(root.snapshots)
+    if (!keys.length) return
+    const present = {}
+    const toplevels = Hyprland.toplevels ? Hyprland.toplevels.values : []
+    for (let i = 0; i < toplevels.length; i++) {
+      if (toplevels[i]) present[Recency.normalizeAddress(toplevels[i].address)] = true
+    }
+    for (let j = 0; j < keys.length; j++) if (!present[keys[j]]) root.dropSnapshot(keys[j])
+  }
+
   function dropSnapshot(address) {
     const key = Recency.normalizeAddress(address)
     if (!key || !(key in root.snapshots)) return
@@ -499,8 +521,10 @@ Item {
       root.setFilter(control ? "" : root.filterText.slice(0, -1))
       return true
     case Qt.Key_Space:
-      if (root.mode === "hold") root.pin()
-      else if (root.filterText) root.setFilter(root.filterText + " ")
+      // Between filter words it is a space; otherwise, while holding, it
+      // keeps the field open.
+      if (root.filterText) root.setFilter(root.filterText + " ")
+      else if (root.mode === "hold") root.pin()
       return true
     }
     if (control) return false
@@ -766,6 +790,7 @@ Item {
 
     function onValuesChanged() {
       root.sweepClosed()
+      root.sweepSnapshots()
     }
   }
 
@@ -775,6 +800,7 @@ Item {
 
     function onToplevelsChanged() {
       root.sweepClosed()
+      root.sweepSnapshots()
     }
 
     // The grab is gone and Hyprland gave focus back: safe to move it.

@@ -645,4 +645,45 @@ TestCase {
     compare(fathom.selectedIndex, 0)
     verify(fathom.opened)
   }
+
+  function test_space_separates_filter_words_while_holding() {
+    const fathom = createFathom()
+    openHeld(fathom)
+    fathom.handleKey(Qt.Key_W, Qt.AltModifier, "")
+    keyPress(Qt.Key_Space, Qt.AltModifier)
+    compare(fathom.filterText, "w ", "a space between words, not a pin")
+    verify(!fathom.pinned)
+    fathom.handleKey(Qt.Key_C, Qt.AltModifier, "")
+    compare(fathom.order, [2], "both words must match: Window c3")
+    fathom.setFilter("")
+    keyPress(Qt.Key_Space, Qt.AltModifier)
+    verify(fathom.pinned, "with no filter, Space keeps the field open")
+  }
+
+  function test_clicks_before_the_field_is_drawn_do_nothing() {
+    const fathom = createFathom()
+    FakeSystem.press("fathom", "next")
+    verify(!fathom.revealed)
+    mouseClick(fathom.fieldView, 10, fathom.fieldView.height - 10)
+    verify(fathom.opened, "an invisible dismiss area does not cancel")
+    tryVerify(function() { return fathom.revealed }, 1000)
+    mouseClick(fathom.fieldView, 10, fathom.fieldView.height - 10)
+    verify(!fathom.opened, "once drawn, it does")
+  }
+
+  function test_fresh_snapshots_are_kept_and_gone_windows_lose_theirs() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryVerify(function() { return Object.keys(fathom.snapshots).length === 3 }, 3000)
+    const first = fathom.snapshots["b2"].takenAt
+    FakeSystem.ipc("fathom").cancel()
+    FakeSystem.ipc("fathom").open()
+    wait(700)
+    compare(fathom.snapshots["b2"].takenAt, first, "a fresh snapshot is not taken again")
+    FakeSystem.ipc("fathom").cancel()
+    // b2 goes without a closewindow event.
+    Hyprland.toplevels = { values: [Hyprland.toplevels.values[0], Hyprland.toplevels.values[2]] }
+    verify(!("b2" in fathom.snapshots))
+    compare(Object.keys(fathom.snapshots).length, 2)
+  }
 }

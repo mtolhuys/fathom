@@ -22,6 +22,12 @@ Phase 1: the product.
   soon as Hyprland gives focus back; windows that close mid-switch leave the
   field; ages seeded at startup read "earlier"; text follows Omarchy's text
   size.
+- The sounding line: a depth gauge in fathoms beside the stack, a dot per
+  window, the sounding lead at the selection; click or drag it to pick a
+  window by time. The light fades as you dive; the caption reads the depth.
+- Windows Hyprland cannot render (parked beside the screen by a scrolling
+  layout) show the last frame Fathom saw of them, kept in memory only, or say
+  they are off screen.
 - `tests/qml/render.sh` renders the field offscreen for design review.
 
 ## 0.1.0 (unreleased)
