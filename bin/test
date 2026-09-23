@@ -30,8 +30,11 @@ for candidate in /usr/lib/qt6/bin/qmllint "$(command -v qmllint6 || true)"; do
 done
 if [[ -n $qmllint_bin ]]; then
   # Against the stubs, only the layer-shell window itself cannot resolve.
-  (cd "$project_root/src" && "$qmllint_bin" -I "$project_root/tests/qml/stubs" \
-    --import disable --type disable \
+  # --bare puts the stubs ahead of the system's Qt modules: an installed
+  # Quickshell would otherwise win over them.
+  qt_qml_dir=$(qtpaths6 --query QT_INSTALL_QML 2>/dev/null || echo /usr/lib/qt6/qml)
+  (cd "$project_root/src" && "$qmllint_bin" --bare -I "$project_root/tests/qml/stubs" -I "$qt_qml_dir" \
+    --import disable --unresolved-type disable \
     Fathom.qml FieldView.qml WindowPlane.qml RecencyTracker.qml FrameProbe.qml)
   printf 'ok - qmllint\n'
 fi
