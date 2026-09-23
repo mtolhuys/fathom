@@ -26,7 +26,7 @@ and hyprland-alttab (`vbrosseau.alttab`). Fathom uses a plain Quickshell
 (`mtolhuys/omakit`, blocks Run and Store) nor the archived runtime
 (BarPanelPlugin, CommandTask, PluginStore) has an overlay base.
 
-Omakit's workflow applies to Fathom as follows (see `AGENTS.md`):
+Omakit's workflow applies to Fathom as follows (see `DEVELOPMENT.md`):
 
 | Job | For Fathom |
 | --- | --- |

@@ -29,6 +29,20 @@ entry=$(jq -r '.entryPoints.overlay // ""' "$manifest")
 link=$(find "$project_root" -name .git -prune -o -type l -print -quit)
 [[ -z $link ]] || fail "symlinks are not allowed inside a plugin folder: $link"
 
+# Agent instruction files never ship (omakit's tree.agent-control, any depth,
+# any case). A local, git-ignored AGENTS.md is fine, so tracked files are
+# checked when there is a repository, and every file otherwise.
+agent_control='(^|/)(agents\.md|claude\.md|skill\.md|\.mcp\.json)$|(^|/)\.(claude|codex)/|(^|/)skills/(.*/)?[^/]*\.(md|markdown|mdc)$'
+if git -C "$project_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  shipped=$(git -C "$project_root" ls-files)
+else
+  shipped=$(cd "$project_root" && find . -type f | sed 's|^\./||')
+fi
+if agent_files=$(grep -iE "$agent_control" <<<"$shipped"); then
+  fail "agent instruction files in the installable tree (move the guidance to DEVELOPMENT.md):
+$agent_files"
+fi
+
 # The build identity the IPC reports must match the manifest version.
 version=$(jq -r '.version' "$manifest")
 grep -q "readonly property string buildIdentity: \"$version-" "$project_root/$entry" \

@@ -4,3 +4,13 @@
 .cache/
 test-results/
 screenshots-local/
+
+# Agent instruction files stay out of the installable tree (omakit's
+# tree.agent-control). The guidance lives in DEVELOPMENT.md; a local AGENTS.md
+# may point to it.
+AGENTS.md
+CLAUDE.md
+SKILL.md
+.mcp.json
+.claude/
+.codex/

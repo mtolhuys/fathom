@@ -111,7 +111,7 @@ omakit weigh io.github.mtolhuys.fathom             # restarts the shell; asks fi
 ```
 
 Fathom starts no program and keeps no file of its own, so it carries neither
-of omakit's blocks; `AGENTS.md` says what happens if that ever changes.
+of omakit's blocks; `DEVELOPMENT.md` says what happens if that ever changes.
 
 ## Known limitations (Phase 0)
 

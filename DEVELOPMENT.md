@@ -19,6 +19,9 @@ Fathom is a depth-based Alt-Tab overlay plugin for Omarchy Quattro. Read
   the plugin through `omarchy plugin enable` (which adds its entry to
   `shell.json`) is the one sanctioned exception.
 - All code, identifiers, comments and user-facing text in English.
+- No agent instruction file (`AGENTS.md`, `CLAUDE.md`, `SKILL.md`, `.mcp.json`,
+  `.claude/`, `.codex/`) is ever tracked; this contract lives here, and
+  `tests/manifest.test.sh` holds that line.
 
 ## Layout of the code
 
