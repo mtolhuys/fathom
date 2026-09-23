@@ -8,28 +8,17 @@
 --
 --   hyprctl eval 'dofile(os.getenv("HOME") .. "/Projects/plugins/fathom/hypr/fathom.lua")'
 --
--- Loading it again replaces what the previous load set up.
---
--- The shell plugin owns all state. This file forwards three events to it as
--- Hyprland global shortcuts (fathom:next, fathom:previous, fathom:release),
--- which reach the shell in order over one Wayland connection.
---
--- While Alt is held after Alt+Tab, Hyprland is in a `fathom` submap where only
--- Fathom's two chords are bound. Every other Alt chord (Alt+Left, Alt+Up,
--- Alt+1, Alt+letters) then reaches the overlay, which uses them to move
--- through the field, instead of whatever that chord does elsewhere (Omarchy's
--- text navigation, another switcher). Releasing Alt leaves the submap.
+-- Loading it twice in one Lua state does nothing the second time: tearing a
+-- keybind or an event hook down from Lua crashed Hyprland 0.56.2 (SIGABRT
+-- inside its Lua API). To pick up a change, run `hyprctl reload`, which starts
+-- a fresh Lua state.
 
-local fathom = rawget(_G, "__fathom") or {}
+if rawget(_G, "__fathom") then
+  return
+end
+
+local fathom = {}
 _G.__fathom = fathom
-
--- A second load first removes what the first one added.
-for _, bind in ipairs(fathom.binds or {}) do
-  pcall(function() bind:remove() end)
-end
-if fathom.hook then
-  pcall(function() fathom.hook:remove() end)
-end
 fathom.binds = {}
 
 local function remember(bind)
@@ -64,7 +53,7 @@ end
 --
 -- 64 is Alt_L and 108 is Alt_R. This runs for every key event, so outside a
 -- switch it stays at a table lookup and a string comparison. It is set up
--- before anything else that could fail on a reload.
+-- before anything that could fail.
 local FATHOM_ALT_KEYCODES = { [64] = true, [108] = true }
 
 fathom.hook = hl.on("input.keyboard.key", function(keycode, _, state)
@@ -80,20 +69,18 @@ hl.unbind("ALT + TAB")
 hl.unbind("ALT + SHIFT + TAB")
 bind_chords()
 
--- The submap is optional: when it cannot be (re)defined, Alt+Tab still works
--- and simply does not hold the other Alt chords. The release hook above is
+-- The submap is optional: when it cannot be defined, Alt+Tab still works and
+-- simply does not hold the other Alt chords. The release hook above is
 -- already in place either way, so the submap can never be left behind.
 fathom.submap = pcall(hl.define_submap, "fathom", bind_chords)
 
 -- Show the field at once instead of fading the layer in, and frost what is
--- behind it. Created once per session: a layer rule cannot be removed.
-if not fathom.layer_rule then
-  fathom.layer_rule = hl.layer_rule({
-    name = "fathom",
-    match = { namespace = "^fathom$" },
-    no_anim = true,
-    animation = "none",
-    blur = true,
-    ignore_alpha = 0.3,
-  })
-end
+-- behind it.
+fathom.layer_rule = hl.layer_rule({
+  name = "fathom",
+  match = { namespace = "^fathom$" },
+  no_anim = true,
+  animation = "none",
+  blur = true,
+  ignore_alpha = 0.3,
+})

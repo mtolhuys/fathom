@@ -1,6 +1,6 @@
 -- Loads hypr/fathom.lua against a recording mock of Hyprland's `hl` table and
 -- checks what it binds, the submap it holds while Alt is down, what the raw
--- key hook forwards, and that loading it twice replaces the first load.
+-- key hook forwards, and that a second load in the same Lua state is a no-op.
 --
 --   lua tests/lua/bindings.test.lua hypr/fathom.lua
 
@@ -138,24 +138,24 @@ check(#state.layer_rule == 1 and state.layer_rule[1].match.namespace == "^fathom
   and state.layer_rule[1].no_anim == true and state.layer_rule[1].blur == true,
   "the fathom layer shows at once, over a blurred background")
 
--- Loading the file a second time replaces the first load, even when Hyprland
--- refuses to define the submap again: Alt+Tab keeps working, the release hook
--- is still there, and no submap is entered that nothing would leave.
-local define = hl.define_submap
-hl.define_submap = function() error("submap exists") end
+-- Loading the file a second time in the same Lua state does nothing: no
+-- keybind or hook is torn down (that crashed Hyprland 0.56.2) or added twice.
+local binds_before, hooks_before, rules_before = #state.binds, #state.hooks, #state.layer_rule
 dofile(path)
-hl.define_submap = define
-state.dispatch = {}
+local removed = 0
+for _, item in ipairs(state.binds) do if not item.active then removed = removed + 1 end end
+for _, item in ipairs(state.hooks) do if not item.active then removed = removed + 1 end end
+check(#state.binds == binds_before and #state.hooks == hooks_before and #state.layer_rule == rules_before
+  and removed == 0, "a second load in the same Lua state changes nothing")
+
+-- A fresh Lua state (hyprctl reload) loads it again; a submap Hyprland refuses
+-- to define leaves Alt+Tab working without one.
+_G.__fathom = nil
+state = { submap = "", binds = {}, hooks = {}, unbind = {}, dispatch = {}, layer_rule = {} }
+hl.define_submap = function() error("cannot define") end
+dofile(path)
 press("ALT + TAB")
 check(sent({ "fathom:next" }) and state.submap == "", "without a submap Alt+Tab still opens and holds no submap")
-hook()(64, 0, 0)
-state.submap = ""
-dofile(path)
-local hooks = 0
-for _, item in ipairs(state.hooks) do if item.active then hooks = hooks + 1 end end
-check(count(active("")) == 2 and count(active("fathom")) == 2, "reloading leaves one set of bindings")
-check(hooks == 1, "reloading leaves one raw key hook")
-check(#state.layer_rule == 1, "reloading adds no second layer rule")
 
 if failures > 0 then
   os.exit(1)

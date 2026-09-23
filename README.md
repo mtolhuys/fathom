@@ -97,7 +97,8 @@ dofile(os.getenv("HOME") .. "/.config/omarchy/plugins/io.github.mtolhuys.fathom/
 The snippet unbinds Omarchy's default `Alt`+`Tab` chords, binds them to
 Fathom, adds a raw key hook that reports the `Alt` release, and frosts the
 background behind the overlay. Load it after any other Alt-Tab plugin's
-bindings, or instead of them. Loading it again replaces the previous load.
+bindings, or instead of them. After changing the snippet, run `hyprctl reload`;
+loading it a second time with `hyprctl eval` does nothing.
 
 Without the Lua snippet, any Hyprland bind can drive Fathom through IPC:
 `omarchy-shell fathom hold 1` behaves like `Alt`+`Tab`,

@@ -66,8 +66,8 @@ open (see the open question in [SPEC.md](SPEC.md)).
   side-by-side marks, "+N", nearest visible mark, fathom labels).
 - Bindings (Lua, mocked `hl` with submaps): the chords, the submap holding only
   those chords, entering it once, leaving it and sending the release on either
-  Alt, the blurred layer rule, a second load replacing the first, and a reload
-  that cannot redefine the submap still working without one.
+  Alt, the blurred layer rule, a second load changing nothing, and Alt+Tab
+  working where the submap cannot be defined.
 - QML (qmltestrunner, 42 tests): everything Phase 0 covered, plus arrows with
   and without Alt, Home, End, PageDown, workspace left and right, digits,
   typing to filter (digits join a filter, Enter with no match does nothing,
@@ -111,6 +111,14 @@ on 2026-09-23 (Omarchy 4.0.4, Hyprland 0.56.2, Quickshell 0.3.1).
   drawing a window parked several screens away outside its card; fixed
   (`5c36874`) and covered by a test.
 
+- Loading the 0.2 snippet a second time in the same session (`hyprctl eval`
+  of `dofile`) crashed Hyprland 0.56.2 (SIGABRT inside its Lua API, called
+  from a `pcall` while the reload removed the first load's keybinds and hook
+  and redefined the submap); Hyprland's watchdog restarted it in safe mode.
+  The mocked `hl` of the Lua tests could not show it. Since `<fix>`, a second
+  load in one Lua state does nothing and changes need `hyprctl reload`.
+  Which of the three calls crashes is not known without Hyprland's symbols.
+
 ## Not yet verified
 
 - Frame times of 0.2 on the device (cards with rounded clipping, shadows and
@@ -121,6 +129,9 @@ on 2026-09-23 (Omarchy 4.0.4, Hyprland 0.56.2, Quickshell 0.3.1).
 - That the focus request really goes out on Hyprland's restore event (the
   120 ms fallback covers it either way).
 - Focusing a window on a hidden scratchpad.
+- The snapshot grab and the sounding line on the device (built after the
+  last device check).
+- Loading the fixed snippet on the device after `hyprctl reload`.
 - `omakit weigh io.github.mtolhuys.fathom`.
 
 ## Check loop

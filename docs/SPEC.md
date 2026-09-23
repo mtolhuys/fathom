@@ -240,10 +240,11 @@ its own, so the release comes from a raw `input.keyboard.key` hook for keycodes
 the `fathom` submap. The overlay also sees the Alt release itself. Every
 handler is idempotent, so two releases focus once.
 
-The snippet can be loaded again: it removes the binds and the hook of the
-previous load first, sets up the release hook before anything else, and
-treats the submap as optional, so a reload that cannot redefine it leaves
-Alt+Tab working and never enters a submap nothing would leave.
+A second load in the same Lua state does nothing: tearing a keybind or an
+event hook down from Lua crashed Hyprland 0.56.2 (see PHASE1.md). Changes to
+the snippet take effect on `hyprctl reload`, which starts a fresh Lua state.
+The release hook is set up before anything that could fail, and the submap is
+optional, so Alt+Tab works even where the submap cannot be defined.
 
 ## Focusing **(kickstart, adapted)**
 
