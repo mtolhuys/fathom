@@ -13,7 +13,7 @@ focus the window in front. Below the stack, a map shows every workspace with
 its windows where they really are.
 
 <p align="center">
-  <img src="https://github.com/mtolhuys/fathom/releases/download/v0.2.0/fathom-demo.webp" alt="Alt+Tab opens Fathom over the desktop; Tab dives four windows deep while the sounding line's lead descends and the map follows; Right jumps to the next workspace; typing filters to a photo library; releasing Alt focuses it." width="100%">
+  <img src="docs/media/demo.webp" alt="Alt+Tab opens Fathom over the desktop; Tab dives four windows deep while the sounding line's lead descends and the map follows; Right jumps to the next workspace; typing filters to a photo library; releasing Alt focuses it." width="100%">
 </p>
 
 Fathom is an overlay only: it never moves, resizes or closes a window. Focusing

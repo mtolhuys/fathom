@@ -8,9 +8,13 @@
 #                              (both: the field in three themes, stacked
 #                              like Fathom's cards, in deep water)
 #   docs/media/themes.webp     four Omarchy themes, two dark, two light
-#   screenshots-local/art/fathom-demo.webp, fathom-demo.gif
-#                              the demo (animated WebP for the README, a GIF
-#                              to share), published as release assets so they
+#   docs/media/demo.webp       the demo for the README, compact (1120 px,
+#                              12 fps): GitHub serves release assets as
+#                              octet-stream with nosniff, which no browser
+#                              shows as an image, so it is tracked
+#   screenshots-local/art/fathom-demo.gif
+#                              the demo to share, published as a release
+#                              asset so it
 #                              are not in every install's clone
 #
 # Needs qmltestrunner (qt6-declarative), ImageMagick 7, ffmpeg and the Yaru
@@ -211,7 +215,7 @@ magick -size 1600x940 xc:none \
   "$raw/tile-gruvbox.png" -geometry +806+485 -compose over -composite \
   -quality 88 "$project_root/docs/media/themes.webp"
 
-printf 'fathom-demo.webp, fathom-demo.gif\n'
+printf 'docs/media/demo.webp, fathom-demo.gif\n'
 n=0
 for frame in "$raw"/demo/f*.png; do
   n=$((n + 1))
@@ -229,11 +233,12 @@ for frame in "$raw"/demo/f*.png; do
     "$frame" -compose over -composite -resize 1280x720 "$raw/composed/$(printf '%04d' "$n").png"
 done
 ffmpeg -loglevel error -y -framerate 15 -i "$raw/composed/%04d.png" \
-  -c:v libwebp_anim -lossless 0 -q:v 82 -preset picture -loop 0 "$raw/fathom-demo.webp"
+  -vf "fps=12,scale=1120:-1:flags=lanczos" \
+  -c:v libwebp_anim -lossless 0 -q:v 72 -preset picture -loop 0 "$project_root/docs/media/demo.webp"
 # Error diffusion keeps the gradients smooth where ordered dithering bands.
 ffmpeg -loglevel error -y -framerate 15 -i "$raw/composed/%04d.png" \
   -vf "split[a][b];[a]palettegen=max_colors=256:stats_mode=full[p];[b][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle" \
   -loop 0 "$raw/fathom-demo.gif"
 
 du -h "$project_root/preview.webp" "$project_root/docs/media/banner.webp" "$project_root/docs/media/themes.webp" \
-  "$raw/fathom-demo.webp" "$raw/fathom-demo.gif"
+  "$project_root/docs/media/demo.webp" "$raw/fathom-demo.gif"

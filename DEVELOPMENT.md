@@ -94,10 +94,12 @@ Fathom runs inside Maarten's working session. These hold without exception:
   `tests/qml/art` (illustrated stand-in apps from
   `tests/qml/stubs/FathomTest/MockApp.qml`, real focus ages) and composes it
   over a blurred desktop into `preview.webp` (the marketplace preview),
-  `docs/media/banner.webp` and the demo. Omarchy installs a plugin with a
-  plain `git clone`, so every tracked byte reaches every user: the demo
-  (WebP and GIF) is a release asset, never tracked, and the tracked images
-  stay small.
+  `docs/media/banner.webp`, `docs/media/themes.webp` and the demo. Omarchy
+  installs a plugin with a plain `git clone`, so every tracked byte reaches
+  every user: the GIF is a release asset, never tracked, and the tracked
+  images stay small. The README demo is a compact animated WebP in the repo
+  because GitHub serves release assets in a way browsers will not show
+  inline.
 
 ## Checks
 
