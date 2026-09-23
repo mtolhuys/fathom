@@ -108,8 +108,9 @@ function deepPlane(stage, r) {
 // ------------------------------------------------------------ the map
 
 // The rectangle a workspace's minimap has to show: its monitor's viewport,
-// grown to include windows that sit outside it (a scrolling layout parks
-// them there), but never more than three viewports wide or tall.
+// grown to include every window outside it. A scrolling layout parks windows
+// to the left and right of the screen, sometimes several screens away; the
+// whole strip is shown, compressed, rather than cropped.
 function minimapBounds(viewport, windows) {
     var left = viewport.x;
     var top = viewport.y;
@@ -118,22 +119,11 @@ function minimapBounds(viewport, windows) {
     var list = windows || [];
     for (var i = 0; i < list.length; i++) {
         var w = list[i];
-        if (!w || !(w.width > 0) || !(w.height > 0)) continue;
+        if (!w || !(w.width > 0) || !(w.height > 0) || !isFinite(w.x) || !isFinite(w.y)) continue;
         left = Math.min(left, w.x);
         top = Math.min(top, w.y);
         right = Math.max(right, w.x + w.width);
         bottom = Math.max(bottom, w.y + w.height);
-    }
-    var maxWidth = viewport.width * 3;
-    var maxHeight = viewport.height * 3;
-    if (right - left > maxWidth) {
-        // Keep the viewport and as much as fits to its right.
-        left = Math.max(left, viewport.x - viewport.width);
-        right = left + maxWidth;
-    }
-    if (bottom - top > maxHeight) {
-        top = Math.max(top, viewport.y - viewport.height);
-        bottom = top + maxHeight;
     }
     return { x: left, y: top, width: Math.max(1, right - left), height: Math.max(1, bottom - top) };
 }

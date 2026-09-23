@@ -186,6 +186,18 @@ Item {
     return candidates
   }
 
+  // A window's position and size from Hyprland's latest client list, falling
+  // back to the one read when the field opened. Bindings that call this
+  // follow the list: it is refreshed on open and lands a moment later.
+  function geometryOf(entry) {
+    const ipc = entry && entry.toplevel ? entry.toplevel.lastIpcObject : null
+    const at = ipc && ipc.at ? ipc.at : null
+    const size = ipc && ipc.size ? ipc.size : null
+    if (at && size && at.length >= 2 && size.length >= 2)
+      return { x: Number(at[0]), y: Number(at[1]), width: Number(size[0]), height: Number(size[1]) }
+    return entry ? entry.geometry : null
+  }
+
   // Logical geometry of every monitor, for the map's minimaps.
   function collectMonitors() {
     const info = {}
@@ -578,7 +590,7 @@ Item {
         workspace: entry.workspaceName,
         shown: !root.opened || (root.slots[i] !== undefined && root.slots[i] >= 0),
         seconds: isFinite(entry.seconds) ? Math.round(entry.seconds * 10) / 10 : null,
-        age: Field.ageLabel(entry.seconds, entry.active),
+        age: Field.ageLabel(entry.seconds, entry.active, entry.estimated),
         depth: Math.round(entry.depth * 1000) / 1000,
         fog: Math.round(Depth.fogForDepth(entry.depth) * 1000) / 1000
       })
@@ -653,29 +665,35 @@ Item {
 
   // Focus only after the overlay surface is gone: releasing the exclusive
   // keyboard grab makes Hyprland restore focus to the previous window, which
-  // would undo a focus sent any earlier.
+  // would undo a focus sent any earlier. Hyprland announces that restore
+  // (activewindowv2 with the previous window's address), and the request
+  // goes out on that event; this timer is the fallback when none comes.
+  function dispatchPendingFocus() {
+    focusTimer.stop()
+    const address = root.pendingFocusAddress
+    root.pendingFocusAddress = ""
+    const groupIndex = root.pendingGroupIndex
+    root.pendingGroupIndex = 0
+    if (!address) return
+    // The window may have closed in the meantime.
+    let present = false
+    const toplevels = Hyprland.toplevels ? Hyprland.toplevels.values : []
+    for (let i = 0; i < toplevels.length; i++) {
+      if (toplevels[i] && Recency.normalizeAddress(toplevels[i].address) === address) present = true
+    }
+    if (!present) return
+    const usingLua = Hyprland.usingLua
+    const group = Focus.groupActivateRequest(address, groupIndex, usingLua)
+    if (group) Hyprland.dispatch(group)
+    const request = Focus.focusRequest(address, usingLua)
+    if (request) Hyprland.dispatch(request)
+  }
+
   Timer {
     id: focusTimer
 
-    interval: 100
-    onTriggered: {
-      const address = root.pendingFocusAddress
-      root.pendingFocusAddress = ""
-      const groupIndex = root.pendingGroupIndex
-      root.pendingGroupIndex = 0
-      // The window may have closed in the meantime.
-      let present = false
-      const toplevels = Hyprland.toplevels ? Hyprland.toplevels.values : []
-      for (let i = 0; i < toplevels.length; i++) {
-        if (toplevels[i] && Recency.normalizeAddress(toplevels[i].address) === address) present = true
-      }
-      if (!present) return
-      const usingLua = Hyprland.usingLua
-      const group = Focus.groupActivateRequest(address, groupIndex, usingLua)
-      if (group) Hyprland.dispatch(group)
-      const request = Focus.focusRequest(address, usingLua)
-      if (request) Hyprland.dispatch(request)
-    }
+    interval: 120
+    onTriggered: root.dispatchPendingFocus()
   }
 
   // If an Alt release is ever missed the field would stay up for good; after
@@ -718,6 +736,13 @@ Item {
 
     function onToplevelsChanged() {
       root.sweepClosed()
+    }
+
+    // The grab is gone and Hyprland gave focus back: safe to move it.
+    function onRawEvent(event) {
+      if (root.pendingFocusAddress && event && event.name === "activewindowv2"
+          && Recency.normalizeAddress(event.data) !== "")
+        root.dispatchPendingFocus()
     }
   }
 

@@ -20,11 +20,12 @@ Item {
   property var controller: null
   property var view: null
   property real unit: 1
+  property real textUnit: unit
   property bool showMonitor: false
 
   readonly property var group: modelData
   readonly property real padding: 8 * unit
-  readonly property real headerHeight: 20 * unit
+  readonly property real headerHeight: 20 * textUnit
   readonly property bool holdsSelection: controller !== null && group.entries.indexOf(controller.selectedIndex) !== -1
   readonly property var viewport: {
     const info = controller ? controller.monitorInfo : ({})
@@ -32,11 +33,12 @@ Item {
     for (const name in info) return info[name]
     return { x: 0, y: 0, width: 1920, height: 1080 }
   }
+  // Positions follow Hyprland's latest client list (see geometryOf).
   readonly property var windows: {
     const list = []
     for (let i = 0; i < group.entries.length; i++) {
       const entry = controller ? controller.field[group.entries[i]] : null
-      list.push(entry ? entry.geometry : null)
+      list.push(controller ? controller.geometryOf(entry) : null)
     }
     return list
   }
@@ -94,7 +96,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color: card.holdsSelection ? Color.accent : Color.foreground
         font.family: Style.font.family
-        font.pixelSize: 14 * card.unit
+        font.pixelSize: 14 * card.textUnit
         font.bold: true
         font.italic: card.group.special
         text: card.group.label
@@ -104,7 +106,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color: Color.muted
         font.family: Style.font.family
-        font.pixelSize: 11 * card.unit
+        font.pixelSize: 11 * card.textUnit
         text: {
           const total = card.group.entries.length
           if (total === 0) return "empty"
@@ -124,7 +126,7 @@ Item {
         visible: card.showMonitor && card.group.monitor.length > 0
         color: Color.muted
         font.family: Style.font.family
-        font.pixelSize: 10 * card.unit
+        font.pixelSize: 10 * card.textUnit
         text: card.group.monitor
       }
 
@@ -142,7 +144,7 @@ Item {
         visible: card.group.onScreen && card.width > 190 * card.unit
         color: Color.accent
         font.family: Style.font.family
-        font.pixelSize: 10 * card.unit
+        font.pixelSize: 10 * card.textUnit
         text: "on screen"
       }
     }
@@ -155,6 +157,7 @@ Item {
     y: header.y + header.height + card.padding * 0.5
     width: card.width - card.padding * 2
     height: card.height - y - card.padding
+    clip: true
 
     // The monitor's screen area; windows a scrolling layout parked beside
     // it show outside this outline.
@@ -175,7 +178,7 @@ Item {
       visible: card.group.entries.length === 0
       color: Color.muted
       font.family: Style.font.family
-      font.pixelSize: 10 * card.unit
+      font.pixelSize: 10 * card.textUnit
       text: "no windows"
     }
 

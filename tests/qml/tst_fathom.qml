@@ -92,7 +92,7 @@ TestCase {
     compare(rows[0].fog, 0)
     fuzzyCompare(rows[1].fog, Depth.fogForDepth(1), 0.01)
     compare(rows[0].age, "focused")
-    compare(rows[1].age, "30 s ago")
+    compare(rows[1].age, "earlier", "a seeded age is not printed as measured")
     compare(rows[1].app, "Foot")
   }
 
@@ -562,5 +562,36 @@ TestCase {
     const state = JSON.parse(FakeSystem.ipc("fathom").state())
     compare(state.workspaces, 2)
     compare(state.shown, 3)
+  }
+
+  function test_focus_goes_out_as_soon_as_hyprland_restores_focus() {
+    const fathom = createFathom()
+    FakeSystem.press("fathom", "next")
+    FakeSystem.press("fathom", "release")
+    compare(Hyprland.dispatches.length, 0, "not while the grab may still be in place")
+    // An empty address (a layer took focus) is not the restore.
+    Hyprland.rawEvent({ name: "activewindowv2", data: "" })
+    compare(Hyprland.dispatches.length, 0)
+    Hyprland.rawEvent({ name: "activewindowv2", data: "a1" })
+    compare(Hyprland.dispatches, ['hl.dsp.focus({ window = "address:0xb2" })'], "right on the restore")
+    wait(250)
+    compare(Hyprland.dispatches.length, 1, "and only once")
+  }
+
+  function test_caption_click_focuses_and_the_filter_pill_is_not_empty_space() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    keyClick(Qt.Key_B)
+    compare(fathom.selectedIndex, 1)
+    const view = fathom.fieldView
+    // The filter pill sits at the top left.
+    mouseClick(view, view.margin + 10, view.margin + 10)
+    verify(fathom.opened, "a click on the filter pill keeps the field open")
+    // The caption sits just above the map, at the front card's left edge.
+    const captionY = view.height - view.margin - view.mapHeight - view.captionHeight / 2 - 14 * view.unit
+    mouseClick(view, view.stage.frontX - view.stage.frontWidth / 2 + 60, captionY)
+    tryVerify(function() { return !fathom.opened }, 1000)
+    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xb2" })'], 1000)
   }
 }

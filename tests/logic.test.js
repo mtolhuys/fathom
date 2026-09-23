@@ -243,6 +243,25 @@ test('ages read naturally, long and short', () => {
   assert.equal(Field.ageShort(42), '42s');
   assert.equal(Field.ageShort(185), '3m');
   assert.equal(Field.ageShort(Infinity), '');
+  assert.equal(Field.ageLabel(60, false, true), 'earlier');
+  assert.equal(Field.ageShort(60, false, true), '');
+});
+
+test('seeded ages are estimates until Fathom sees focus move', () => {
+  const state = Recency.createState();
+  Recency.seedFromClients(state, [
+    { address: '0xa1', focusHistoryID: 0 },
+    { address: '0xb2', focusHistoryID: 1 },
+    { address: '0xc3', focusHistoryID: 2 },
+  ], 100000);
+  let field = Recency.buildField([{ address: 'a1' }, { address: 'b2' }, { address: 'c3' }], state, 100000);
+  assert.deepEqual(Array.from(field, (e) => e.estimated), [false, true, true]);
+  // Focus moves to c3: a1 lost focus now, c3 is focused; b2 is still a guess.
+  Recency.recordFocus(state, 'c3', 110000);
+  field = Recency.buildField([{ address: 'a1' }, { address: 'b2' }, { address: 'c3' }], state, 110000);
+  assert.deepEqual(Array.from(field, (e) => [e.address, e.estimated]), [['c3', false], ['a1', false], ['b2', true]]);
+  Recency.recordClose(state, 'b2');
+  assert.equal(state.estimated.b2, undefined);
 });
 
 test('workspace labels name scratchpads and named workspaces', () => {
@@ -410,9 +429,12 @@ test('minimaps show the screen and the windows parked beside it', () => {
   const viewport = { x: 0, y: 0, width: 1600, height: 1000 };
   const bounds = Layout.minimapBounds(viewport, [{ x: 0, y: 0, width: 1600, height: 1000 }, { x: 1600, y: 0, width: 800, height: 1000 }]);
   assert.deepEqual(Object.assign({}, bounds), { x: 0, y: 0, width: 2400, height: 1000 });
-  // Never wider than three screens.
-  const far = Layout.minimapBounds(viewport, [{ x: 9000, y: 0, width: 800, height: 1000 }]);
-  close(far.width, 4800);
+  // Windows parked far away (a scrolling layout) are shown, not cropped.
+  const far = Layout.minimapBounds(viewport, [{ x: -700, y: 28, width: 1600, height: 970 }, { x: 9000, y: 0, width: 800, height: 1000 }]);
+  close(far.x, -700);
+  close(far.width, 10500);
+  const strip = Layout.minimapItems(viewport, [{ x: -700, y: 0, width: 1600, height: 1000 }, { x: 9000, y: 0, width: 800, height: 1000 }], 300, 100);
+  for (const rect of strip.rects) assert.ok(rect.x >= -1e-6 && rect.x + rect.width <= 300 + 1e-6, 'every window stays inside the minimap');
   const items = Layout.minimapItems(viewport, [{ x: 0, y: 0, width: 800, height: 1000 }, { x: 800, y: 0, width: 800, height: 1000 }], 160, 100);
   close(items.rects[0].width, 80);
   close(items.rects[1].x, 80);

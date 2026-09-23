@@ -23,6 +23,7 @@ Item {
   property var controller: null
   property var stage: null
   property real unit: 1
+  property real textUnit: unit
 
   readonly property var entry: modelData
   readonly property var toplevel: entry ? entry.toplevel : null
@@ -52,7 +53,7 @@ Item {
 
   readonly property var geometry: stage ? Layout.deepPlane(stage, r) : ({ x: 0, y: 0, width: 1, height: 1, scale: 1, opacity: 0, z: 0 })
   readonly property real depthScale: Math.min(1, geometry.scale)
-  readonly property real headerHeight: Math.max(18 * unit, Math.min(30 * unit, height * 0.1))
+  readonly property real headerHeight: Math.max(18 * textUnit, Math.min(30 * textUnit, height * 0.1))
   readonly property real pad: Math.max(3, 8 * unit * depthScale)
   readonly property real radius: Math.max(4, 11 * unit * depthScale)
   readonly property real fog: entry
@@ -123,7 +124,7 @@ Item {
       elide: Text.ElideRight
       color: Color.foreground
       font.family: Style.font.family
-      font.pixelSize: Math.max(10, Math.min(13 * card.unit, card.headerHeight * 0.46))
+      font.pixelSize: Math.max(10, Math.min(13 * card.textUnit, card.headerHeight * 0.46))
       font.bold: card.selected
       text: card.titleText || (card.entry ? card.entry.appName : "")
     }
@@ -135,8 +136,8 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       color: Color.muted
       font.family: Style.font.family
-      font.pixelSize: Math.max(9, Math.min(11 * card.unit, card.headerHeight * 0.4))
-      text: card.entry ? Field.ageShort(card.entry.seconds, card.entry.active) : ""
+      font.pixelSize: Math.max(9, Math.min(11 * card.textUnit, card.headerHeight * 0.4))
+      text: card.entry ? Field.ageShort(card.entry.seconds, card.entry.active, card.entry.estimated) : ""
     }
   }
 
@@ -182,7 +183,7 @@ Item {
           visible: frame.height > 110 * card.unit
           color: Color.muted
           font.family: Style.font.family
-          font.pixelSize: Math.max(10, Math.min(13 * card.unit, frame.height * 0.05))
+          font.pixelSize: Math.max(10, Math.min(13 * card.textUnit, frame.height * 0.05))
           text: card.entry ? card.entry.appName : ""
         }
       }

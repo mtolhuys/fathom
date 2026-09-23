@@ -9,6 +9,7 @@ import QtQuick
 import qs.Commons // qmllint disable import
 import "Layout.js" as Layout
 import "Field.js" as Field
+import "Focus.js" as Focus
 
 Item {
   id: view
@@ -20,6 +21,8 @@ Item {
 
   // One unit is a pixel on a 1000 px tall screen; everything scales with it.
   readonly property real unit: Math.max(0.75, Math.min(1.6, height / 1000))
+  // Text also follows Omarchy's text size (`omarchy display text size`).
+  readonly property real textUnit: unit * Math.max(0.85, Math.min(1.6, Number(Style.fontScale) || 1))
   readonly property real margin: Math.max(16, width * 0.022)
   readonly property var entry: controller ? controller.selectedEntry : null
   readonly property bool holding: controller !== null && controller.mode === "hold"
@@ -116,6 +119,7 @@ Item {
         controller: view.controller
         stage: view.stage
         unit: view.unit
+        textUnit: view.textUnit
       }
     }
   }
@@ -130,6 +134,13 @@ Item {
     width: view.width - x - view.margin
     height: view.captionHeight
     visible: view.entry !== null
+
+    // The caption names the selection; a click on it focuses it.
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      onClicked: if (view.controller && view.controller.selectedEntry) view.controller.commit()
+    }
 
     AppIcon {
       id: captionIcon
@@ -153,7 +164,7 @@ Item {
         elide: Text.ElideRight
         color: Color.foreground
         font.family: Style.font.family
-        font.pixelSize: 20 * view.unit
+        font.pixelSize: 20 * view.textUnit
         font.bold: true
         text: {
           const toplevel = view.entry ? view.entry.toplevel : null
@@ -166,7 +177,7 @@ Item {
         elide: Text.ElideRight
         color: Color.muted
         font.family: Style.font.family
-        font.pixelSize: 13 * view.unit
+        font.pixelSize: 13 * view.textUnit
         text: {
           const entry = view.entry
           if (!entry) return ""
@@ -174,7 +185,9 @@ Item {
           if (entry.appName) parts.push(entry.appName)
           const workspace = Field.workspaceLabel(entry.workspaceName, entry.workspaceId)
           parts.push(Field.isSpecialName(entry.workspaceName) ? "scratchpad " + workspace : "workspace " + workspace)
-          parts.push(Field.ageLabel(entry.seconds, entry.active))
+          const tab = Focus.groupIndexFor(entry.address, entry.grouped)
+          if (tab > 0 && entry.grouped.length > 1) parts.push("tab " + tab + " of " + entry.grouped.length)
+          parts.push(Field.ageLabel(entry.seconds, entry.active, entry.estimated))
           if (entry.toplevel && entry.toplevel.urgent) parts.push("wants attention")
           return parts.join("  ·  ")
         }
@@ -188,7 +201,7 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       color: Color.muted
       font.family: Style.font.family
-      font.pixelSize: 13 * view.unit
+      font.pixelSize: 13 * view.textUnit
       text: view.controller && view.controller.selectedSlot >= 0
         ? (view.controller.selectedSlot + 1) + " / " + view.controller.order.length : ""
     }
@@ -204,7 +217,7 @@ Item {
       anchors.horizontalCenter: parent.horizontalCenter
       color: Color.foreground
       font.family: Style.font.family
-      font.pixelSize: 20 * view.unit
+      font.pixelSize: 20 * view.textUnit
       text: "No window matches “" + (view.controller ? view.controller.filterText : "") + "”"
     }
 
@@ -212,7 +225,7 @@ Item {
       anchors.horizontalCenter: parent.horizontalCenter
       color: Color.muted
       font.family: Style.font.family
-      font.pixelSize: 13 * view.unit
+      font.pixelSize: 13 * view.textUnit
       text: "Backspace to edit  ·  Esc to clear"
     }
   }
@@ -225,7 +238,7 @@ Item {
     visible: !filterBar.visible && view.controller !== null
     color: Color.muted
     font.family: Style.font.family
-    font.pixelSize: 13 * view.unit
+    font.pixelSize: 13 * view.textUnit
     text: {
       const controller = view.controller
       if (!controller) return ""
@@ -251,6 +264,12 @@ Item {
     border.color: view.filtering ? Qt.alpha(Color.accent, 0.7) : Qt.alpha(Color.foreground, 0.14)
     visible: view.filtering || (view.controller !== null && view.controller.mode === "browse")
 
+    // Not empty space: a click here must not close the field.
+    MouseArea {
+      anchors.fill: parent
+      onClicked: view.focusKeys()
+    }
+
     Row {
       id: filterRow
 
@@ -262,7 +281,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color: view.filtering ? Color.accent : Color.muted
         font.family: Style.font.family
-        font.pixelSize: 14 * view.unit
+        font.pixelSize: 14 * view.textUnit
         text: "/"
       }
 
@@ -270,7 +289,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color: view.filtering ? Color.foreground : Color.muted
         font.family: Style.font.family
-        font.pixelSize: 14 * view.unit
+        font.pixelSize: 14 * view.textUnit
         text: view.filtering ? view.controller.filterText : "type to filter"
       }
 
@@ -287,7 +306,7 @@ Item {
         visible: view.filtering
         color: Color.muted
         font.family: Style.font.family
-        font.pixelSize: 12 * view.unit
+        font.pixelSize: 12 * view.textUnit
         text: view.controller ? view.controller.order.length + " of " + view.controller.field.length : ""
       }
     }
@@ -331,7 +350,7 @@ Item {
             anchors.centerIn: parent
             color: Color.foreground
             font.family: Style.font.family
-            font.pixelSize: 11 * view.unit
+            font.pixelSize: 11 * view.textUnit
             text: hint.modelData[0]
           }
         }
@@ -340,11 +359,20 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           color: Color.muted
           font.family: Style.font.family
-          font.pixelSize: 11 * view.unit
+          font.pixelSize: 11 * view.textUnit
           text: hint.modelData[1]
         }
       }
     }
+  }
+
+  // Not empty space: a click on the hints must not close the field.
+  MouseArea {
+    x: hints.x
+    y: hints.y
+    width: hints.width
+    height: hints.height
+    onClicked: view.focusKeys()
   }
 
   // ------------------------------------------------------------ the map
@@ -359,6 +387,7 @@ Item {
     controller: view.controller
     view: view
     unit: view.unit
+    textUnit: view.textUnit
   }
 
   // ------------------------------------------------------------ keys

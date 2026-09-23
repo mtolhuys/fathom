@@ -31,9 +31,12 @@ function appName(appId, desktopName) {
     return out.join(" ");
 }
 
-// How long ago a window last had focus, for captions and plane labels.
-function ageLabel(seconds, active) {
+// How long ago a window last had focus, for captions and plane labels. An
+// estimated age (seeded from Hyprland's focus order when the shell started)
+// is not printed as if it were measured.
+function ageLabel(seconds, active, estimated) {
     if (active) return "focused";
+    if (estimated) return "earlier";
     var value = Number(seconds);
     if (!isFinite(value)) return "not used yet";
     if (value < 10) return "just now";
@@ -44,8 +47,9 @@ function ageLabel(seconds, active) {
 }
 
 // The short form for tight labels: "now", "40s", "12m", "3h", "2d".
-function ageShort(seconds, active) {
+function ageShort(seconds, active, estimated) {
     if (active) return "now";
+    if (estimated) return "";
     var value = Number(seconds);
     if (!isFinite(value)) return "";
     if (value < 10) return "now";

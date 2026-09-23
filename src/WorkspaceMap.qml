@@ -13,11 +13,12 @@ Item {
   property var controller: null
   property var view: null
   property real unit: 1
+  property real textUnit: unit
 
   readonly property var groups: controller ? controller.groups : []
   readonly property real gap: 10 * unit
   readonly property real chrome: 16 * unit
-  readonly property real headerSpace: 34 * unit
+  readonly property real headerSpace: 14 * unit + 20 * textUnit
   readonly property bool multiMonitor: {
     const info = controller ? controller.monitorInfo : ({})
     return Object.keys(info).length > 1
@@ -31,8 +32,8 @@ Item {
       const viewport = info[group.monitor] || (names.length ? info[names[0]] : { x: 0, y: 0, width: 1920, height: 1080 })
       const windows = []
       for (let j = 0; j < group.entries.length; j++) {
-        const entry = controller.field[group.entries[j]]
-        if (entry && entry.geometry) windows.push(entry.geometry)
+        const geometry = controller.geometryOf(controller.field[group.entries[j]])
+        if (geometry) windows.push(geometry)
       }
       const bounds = Layout.minimapBounds(viewport, windows)
       list.push(bounds.width / bounds.height)
@@ -70,6 +71,7 @@ Item {
         controller: map.controller
         view: map.view
         unit: map.unit
+        textUnit: map.textUnit
         showMonitor: map.multiMonitor
         width: map.metrics.widths[index] || 100
         height: map.metrics.height + map.headerSpace

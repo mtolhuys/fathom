@@ -76,20 +76,33 @@ TestCase {
     }
   }
 
-  function setUpDesktop(count, screenWidth, screenHeight) {
+  // The layout of the machine this was designed on: the monitor sits at
+  // x = 2496, workspace 1 is a scrolling layout with windows parked to both
+  // sides, workspace 2 holds a fullscreen game and a floating launcher.
+  readonly property var scrolling: [
+    ["steam_app_4358690", "Graveyard Keeper 2", 2, "2", 2496, 0, 1600, 1000, "#3a2a1a", {}],
+    ["brave-origin", "Netflix - Brave Origin", 1, "1", -698, 28, 1593, 970, "#141414", { noContent: true }],
+    ["com.anthropic.Claude", "Claude", 1, "1", 2501, 28, 1590, 970, "#2b2622", {}],
+    ["chatgpt", "ChatGPT", 1, "1", 903, 28, 1590, 970, "#202123", { noContent: true }],
+    ["steam", "Steam", 2, "2", 2746, 163, 1100, 700, "#1b2838", { floating: true }],
+    ["dev.zed.Zed", "fathom \u2014 Fathom.qml", 1, "1", 4099, 28, 1593, 970, "#1f2230", { noContent: true }]
+  ]
+
+  function setUpDesktop(count, screenWidth, screenHeight, rows, monitorX) {
     FakeSystem.reset()
     FakeSystem.surfaceWidth = screenWidth
     FakeSystem.surfaceHeight = screenHeight
+    const source = rows || testCase.desktop
     const values = []
-    for (let i = 0; i < count; i++) values.push(toplevel(testCase.desktop[i % testCase.desktop.length], i))
+    for (let i = 0; i < count; i++) values.push(toplevel(source[i % source.length], i))
     // Tab groups list their members' addresses.
     const members = []
     for (let j = 0; j < values.length; j++) {
-      const extra = testCase.desktop[j % testCase.desktop.length][9] || {}
+      const extra = source[j % source.length][9] || {}
       if (extra.group) members.push(values[j].address)
     }
     for (let k = 0; k < values.length; k++) {
-      const extra = testCase.desktop[k % testCase.desktop.length][9] || {}
+      const extra = source[k % source.length][9] || {}
       if (extra.group) values[k].lastIpcObject.grouped = members.slice()
     }
     Hyprland.usingLua = true
@@ -97,8 +110,8 @@ TestCase {
     Hyprland.activeToplevel = values[0]
     Hyprland.focusedMonitor = { name: "eDP-1" }
     Hyprland.monitors = { values: [{
-      name: "eDP-1", id: 0, x: 0, y: 0, width: screenWidth * 1.6, height: screenHeight * 1.6, scale: 1.6,
-      focused: true, activeWorkspace: { id: 1, name: "1" }, lastIpcObject: {}
+      name: "eDP-1", id: 0, x: monitorX || 0, y: 0, width: screenWidth * 1.6, height: screenHeight * 1.6, scale: 1.6,
+      focused: true, activeWorkspace: rows ? { id: 2, name: "2" } : { id: 1, name: "1" }, lastIpcObject: {}
     }] }
     Hyprland.dispatches = []
   }
@@ -113,8 +126,8 @@ TestCase {
     tryVerify(function() { return saved }, 3000, "saved " + name)
   }
 
-  function open(count, width, height, mode) {
-    setUpDesktop(count, width, height)
+  function open(count, width, height, mode, rows, monitorX) {
+    setUpDesktop(count, width, height, rows, monitorX)
     const fathom = createTemporaryObject(fathomComponent, testCase)
     tryVerify(function() { return JSON.parse(FakeSystem.ipc("fathom").state()).seeded === true }, 2000)
     if (mode === "hold") FakeSystem.press("fathom", "next")
@@ -161,6 +174,11 @@ TestCase {
     const fathom = open(15, 1366, 768, "hold")
     FakeSystem.press("fathom", "next")
     render("07-small-screen", fathom)
+  }
+
+  function test_9_scrolling_layout() {
+    const fathom = open(6, 1600, 1000, "hold", testCase.scrolling, 2496)
+    render("09-scrolling-layout", fathom)
   }
 
   function test_8_forty_windows() {

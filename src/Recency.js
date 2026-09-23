@@ -14,8 +14,10 @@
 // have lost focus k * 30 seconds ago (one depth unit per step, roughly).
 var SEED_STEP_SECONDS = 30;
 
+// `estimated` marks windows whose time comes from the seed rather than from
+// a focus change Fathom saw: their order is Hyprland's, their age is a guess.
 function createState() {
-    return { lastActive: {}, active: "" };
+    return { lastActive: {}, active: "", estimated: {} };
 }
 
 // Hyprland prints addresses as "0x55d1…" (hyprctl) or "55d1…" (socket2 and
@@ -36,10 +38,13 @@ function firstField(eventData) {
 function recordFocus(state, address, nowMs) {
     var key = normalizeAddress(address);
     if (!key) return false;
-    if (state.active && state.active !== key)
+    if (state.active && state.active !== key) {
         state.lastActive[state.active] = nowMs;
+        if (state.estimated) delete state.estimated[state.active];
+    }
     state.active = key;
     state.lastActive[key] = nowMs;
+    if (state.estimated) delete state.estimated[key];
     return true;
 }
 
@@ -58,6 +63,7 @@ function recordClose(state, eventData) {
     var key = normalizeAddress(firstField(eventData));
     if (!key) return false;
     delete state.lastActive[key];
+    if (state.estimated) delete state.estimated[key];
     if (state.active === key) state.active = "";
     return true;
 }
@@ -78,6 +84,7 @@ function seedFromClients(state, clients, nowMs, stepSeconds) {
         if (!isFinite(history) || history < 0) continue;
         state.lastActive[key] = nowMs - history * step;
         if (history === 0 && !state.active) state.active = key;
+        else if (state.estimated) state.estimated[key] = true;
         seeded++;
     }
     return seeded;
@@ -119,6 +126,7 @@ function buildField(candidates, state, nowMs, fallbackActive) {
         entry.active = key === activeKey;
         entry.seconds = secondsSince(state, key, nowMs, fallbackActive);
         entry.depth = Depth.depthForSeconds(entry.seconds);
+        entry.estimated = !entry.active && !!(state.estimated && state.estimated[key]);
         entries.push(entry);
     }
 
