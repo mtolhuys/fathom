@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.mtolhuys.fathom",
+  "name": "Fathom",
+  "version": "0.1.0",
+  "author": "Maarten Tolhuijs",
+  "license": "MIT",
+  "description": "A depth-based Alt-Tab: every window recedes into the distance by how long ago you last used it. Hold Alt, dive with Tab, release to focus.",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "src/Fathom.qml"
+  }
+}

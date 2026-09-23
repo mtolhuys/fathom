@@ -1,0 +1,6 @@
+.DS_Store
+*.log
+*.tmp
+.cache/
+test-results/
+screenshots-local/

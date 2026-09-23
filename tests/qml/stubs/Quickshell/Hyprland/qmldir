@@ -1,0 +1,3 @@
+module Quickshell.Hyprland
+singleton Hyprland 1.0 HyprlandSingleton.qml
+GlobalShortcut 1.0 GlobalShortcut.qml

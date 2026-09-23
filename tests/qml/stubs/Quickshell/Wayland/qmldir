@@ -1,0 +1,2 @@
+module Quickshell.Wayland
+ScreencopyView 1.0 ScreencopyView.qml

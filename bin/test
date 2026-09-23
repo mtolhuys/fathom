@@ -1,0 +1,52 @@
+#!/bin/bash
+# Runs every check that does not need a live Omarchy session.
+
+set -euo pipefail
+
+project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+readonly project_root
+
+bash "$project_root/tests/manifest.test.sh"
+bash "$project_root/tests/static.test.sh"
+
+node --test "$project_root/tests/logic.test.js"
+printf 'ok - logic tests\n'
+
+lua_bin=$(command -v lua5.4 || command -v lua || true)
+if [[ -n $lua_bin ]]; then
+  "$lua_bin" "$project_root/tests/lua/bindings.test.lua" "$project_root/hypr/fathom.lua"
+else
+  printf 'skip - Lua binding tests (lua not found)\n'
+fi
+
+bash "$project_root/tests/qml/run.sh"
+
+qmllint_bin=""
+for candidate in /usr/lib/qt6/bin/qmllint "$(command -v qmllint6 || true)"; do
+  if [[ -n $candidate && -x $candidate ]]; then
+    qmllint_bin=$candidate
+    break
+  fi
+done
+if [[ -n $qmllint_bin ]]; then
+  # Against the stubs, only the layer-shell window itself cannot resolve.
+  (cd "$project_root/src" && "$qmllint_bin" -I "$project_root/tests/qml/stubs" \
+    --import disable --type disable \
+    Fathom.qml FieldView.qml WindowPlane.qml RecencyTracker.qml FrameProbe.qml)
+  printf 'ok - qmllint\n'
+fi
+
+bash -n "$project_root/bin/test" "$project_root/bin/dev-sync" \
+  "$project_root/tests/manifest.test.sh" "$project_root/tests/static.test.sh" "$project_root/tests/qml/run.sh"
+if command -v shellcheck >/dev/null; then
+  shellcheck "$project_root/bin/test" "$project_root/bin/dev-sync" \
+    "$project_root/tests/manifest.test.sh" "$project_root/tests/static.test.sh" "$project_root/tests/qml/run.sh"
+  printf 'ok - ShellCheck\n'
+fi
+
+if command -v omarchy >/dev/null; then
+  omarchy plugin validate "$project_root"
+  printf 'ok - omarchy plugin validate\n'
+else
+  printf 'skip - omarchy plugin validate (omarchy not found)\n'
+fi

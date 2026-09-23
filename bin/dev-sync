@@ -1,0 +1,112 @@
+#!/bin/bash
+# Installs an exact snapshot of the current working tree into the running
+# Omarchy session, the same way Omarchy installs any plugin: from a git
+# checkout, through `omarchy plugin add` and `omarchy plugin enable`.
+#
+# Writes only to ~/.cache/fathom, the plugin's own directory under
+# ~/.config/omarchy/plugins, and (through `omarchy plugin enable`) the plugin's
+# entry in ~/.config/omarchy/shell.json. It does not touch the Hyprland config;
+# the keybindings are loaded separately (see README.md).
+
+set -euo pipefail
+
+readonly plugin_id="io.github.mtolhuys.fathom"
+project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+readonly project_root
+readonly cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/fathom"
+readonly snapshot_dir="$cache_root/development-source"
+readonly installed_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/$plugin_id"
+
+fail() {
+  printf 'dev-sync: %s\n' "$*" >&2
+  exit 1
+}
+
+(( EUID != 0 )) || fail "run this as the Omarchy desktop user, not root"
+
+for command_name in git jq omarchy omarchy-shell sed tar; do
+  command -v "$command_name" >/dev/null 2>&1 || fail "required command is missing: $command_name"
+done
+
+plugin_known() {
+  omarchy plugin list --json | jq -e --arg id "$plugin_id" 'any(.[]; .id == $id)' >/dev/null
+}
+
+wait_for_plugin_state() {
+  local expected="$1"
+  local attempt
+  for attempt in {1..200}; do
+    if [[ $expected == known ]] && plugin_known; then return 0; fi
+    if [[ $expected == absent ]] && ! plugin_known; then return 0; fi
+    if (( attempt % 20 == 0 )); then
+      omarchy-shell shell rescanPlugins >/dev/null || true
+    fi
+    sleep 0.1
+  done
+  return 1
+}
+
+expected_identity=$(sed -n 's/^[[:space:]]*readonly property string buildIdentity: "\([^"]*\)".*/\1/p' \
+  "$project_root/src/Fathom.qml")
+readonly expected_identity
+[[ -n $expected_identity ]] || fail "could not read the build identity from src/Fathom.qml"
+
+printf 'Checking the working tree...\n'
+bash "$project_root/bin/test"
+
+mkdir -p -- "$cache_root"
+if [[ -e $snapshot_dir && ! -d $snapshot_dir/.git ]]; then
+  fail "$snapshot_dir exists but is not a development snapshot"
+fi
+if [[ ! -d $snapshot_dir/.git ]]; then
+  mkdir -p -- "$snapshot_dir"
+  git -C "$snapshot_dir" init -q
+fi
+
+# Drop every path of the previous snapshot, then copy the working tree over.
+while IFS= read -r -d '' tracked_path; do
+  rm -f -- "$snapshot_dir/$tracked_path"
+done < <(git -C "$snapshot_dir" ls-files -z)
+
+tar -C "$project_root" --exclude='./.git' -cf - . | tar -C "$snapshot_dir" -xf -
+
+git -C "$snapshot_dir" add -A
+if ! git -C "$snapshot_dir" rev-parse --verify HEAD >/dev/null 2>&1 \
+    || ! git -C "$snapshot_dir" diff --cached --quiet; then
+  git -C "$snapshot_dir" \
+    -c user.name="Fathom Development" \
+    -c user.email="fathom-development@invalid" \
+    commit -qm "Development snapshot"
+fi
+snapshot_commit=$(git -C "$snapshot_dir" rev-parse HEAD)
+
+if [[ -e $installed_dir || -L $installed_dir ]]; then
+  printf 'Replacing the installed development copy...\n'
+  omarchy plugin remove "$plugin_id" --yes
+fi
+omarchy-shell shell rescanPlugins >/dev/null
+wait_for_plugin_state absent || fail "the removed plugin is still listed after rescanning"
+
+omarchy plugin add "$snapshot_dir" --yes
+omarchy-shell shell rescanPlugins >/dev/null
+wait_for_plugin_state known || fail "the installed plugin was not discovered"
+omarchy plugin enable "$plugin_id"
+
+[[ -d $installed_dir/.git ]] || fail "Omarchy did not create the installed plugin checkout"
+[[ $(git -C "$installed_dir" rev-parse HEAD) == "$snapshot_commit" ]] \
+  || fail "the installed commit does not match the development snapshot"
+
+loaded=false
+for _ in {1..100}; do
+  if omarchy-shell fathom state 2>/dev/null \
+      | jq -e --arg expected "$expected_identity" '.buildIdentity == $expected' >/dev/null; then
+    loaded=true
+    break
+  fi
+  sleep 0.1
+done
+[[ $loaded == true ]] || fail "installed and enabled, but build $expected_identity did not answer on IPC"
+
+printf 'Fathom %s is installed, enabled and loaded.\n' "$expected_identity"
+printf 'Load the keybindings for this session with:\n'
+printf "  hyprctl eval 'dofile(\"%s/hypr/fathom.lua\")'\n" "$installed_dir"

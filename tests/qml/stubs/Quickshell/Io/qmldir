@@ -1,0 +1,2 @@
+module Quickshell.Io
+IpcHandler 1.0 IpcHandler.qml

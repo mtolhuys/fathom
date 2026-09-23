@@ -1,0 +1,2 @@
+module qs.Commons
+singleton Color 1.0 Color.qml
