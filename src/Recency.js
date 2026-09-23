@@ -99,7 +99,7 @@ function historyRank(value) {
 }
 
 // Turn window candidates into the ordered field, front (most recent) first.
-// A candidate is { address, hasHandle, mapped, special, focusHistoryID, ... };
+// A candidate is { address, hasHandle, mapped, focusHistoryID, ... };
 // every other key is carried through untouched.
 function buildField(candidates, state, nowMs, fallbackActive) {
     var list = candidates && candidates.length !== undefined ? candidates : [];
@@ -112,7 +112,6 @@ function buildField(candidates, state, nowMs, fallbackActive) {
         if (!key) continue;
         if (candidate.hasHandle === false) continue;
         if (candidate.mapped === false) continue;
-        if (candidate.special === true) continue;
 
         var entry = {};
         for (var name in candidate) entry[name] = candidate[name];

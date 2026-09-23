@@ -1,17 +1,25 @@
 pragma Singleton
 
 // Shared state for the stub Quickshell modules: registries of the shortcuts
-// and IPC handlers the plugin created.
+// and IPC handlers the plugin created, and the desktop entries it can find.
 
 import QtQuick
 
 QtObject {
   property var shortcuts: []
   property var ipcHandlers: []
+  // Desktop entries by app id, for DesktopEntries.heuristicLookup.
+  property var desktopEntries: ({})
+  // Size of the test host for the field (tests/qml/FieldSurface.qml).
+  property int surfaceWidth: 800
+  property int surfaceHeight: 600
 
   function reset() {
     shortcuts = []
     ipcHandlers = []
+    desktopEntries = ({})
+    surfaceWidth = 800
+    surfaceHeight = 600
   }
 
   function registerShortcut(shortcut) {

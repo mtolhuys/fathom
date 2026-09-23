@@ -1,7 +1,8 @@
 'use strict';
 
-// Unit tests for the pure logic behind Fathom: depth rules, focus recency,
-// focus dispatch strings and frame statistics.
+// Unit tests for the pure logic behind Fathom: depth and fog, focus recency,
+// the field (filter, navigation, workspaces, wheel, labels), the geometry of
+// the Deep and the map, focus dispatch strings and frame statistics.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -13,6 +14,8 @@ const Depth = load(src('Depth.js'));
 const Recency = load(src('Recency.js'));
 const Focus = load(src('Focus.js'));
 const Stats = load(src('Stats.js'));
+const Field = load(src('Field.js'));
+const Layout = load(src('Layout.js'));
 
 const close = (actual, expected, epsilon = 1e-9) =>
   assert.ok(Math.abs(actual - expected) <= epsilon, `${actual} is not within ${epsilon} of ${expected}`);
@@ -30,37 +33,13 @@ test('depth follows log2(1 + seconds / 30), clamped to [0, 8]', () => {
   close(Depth.depthForSeconds(15), Math.log2(1.5));
 });
 
-test('scale and opacity follow the spec formulas', () => {
-  close(Depth.scaleForDepth(0), 1);
-  close(Depth.scaleForDepth(1), 1 / 1.45);
-  close(Depth.scaleForDepth(8), 1 / 4.6);
-  close(Depth.scaleForDepth(12), 1 / 4.6);
-  close(Depth.opacityForDepth(0), 1);
-  close(Depth.opacityForDepth(4), 0.64);
-  close(Depth.opacityForDepth(8), 0.28);
-  close(Depth.opacityForDepth(-3), 1);
-});
-
-test('planes at or behind the camera use depth relative to the camera', () => {
-  close(Depth.planeScale(0, 0), 1);
-  close(Depth.planeOpacity(0, 0), 1);
-  close(Depth.planeScale(2, 3), 1 / 1.9);
-  close(Depth.planeOpacity(2, 3), 0.82);
-  // a transient negative relative depth never enlarges a plane behind the camera
-  close(Depth.planeScale(-0.4, 1), 1);
-});
-
-test('passed planes fade out within half a step and grow a little', () => {
-  close(Depth.planeOpacity(0, -0.25), 0.5);
-  close(Depth.planeOpacity(0, -0.5), 0);
-  close(Depth.planeOpacity(0, -2), 0);
-  close(Depth.planeScale(0, -0.5), 1.15);
-  close(Depth.planeScale(0, -3), 1.3);
-});
-
-test('plane visuals are continuous where the camera meets a plane', () => {
-  close(Depth.planeScale(0, -1e-9), Depth.planeScale(0, 0), 1e-6);
-  close(Depth.planeOpacity(0, -1e-9), Depth.planeOpacity(0, 0), 1e-6);
+test('fog follows depth * 0.08, clamped with depth', () => {
+  close(Depth.fogForDepth(0), 0);
+  close(Depth.fogForDepth(1), 0.08);
+  close(Depth.fogForDepth(8), 0.64);
+  close(Depth.fogForDepth(20), 0.64);
+  close(Depth.fogForDepth(-2), 0);
+  close(Depth.fogForDepth(NaN), 0.64);
 });
 
 test('addresses normalize to lowercase hex without prefix', () => {
@@ -128,7 +107,7 @@ test('seeding marks the focusHistoryID 0 window active when nothing else is', ()
   close(Recency.secondsSince(state, 'b2', 50000), 10);
 });
 
-test('the field is ordered front to back and filters unusable windows', () => {
+test('the field is ordered front to back, keeps scratchpads and drops unusable windows', () => {
   const state = Recency.createState();
   Recency.recordFocus(state, 'a1', 0);
   Recency.recordFocus(state, 'b2', 60000);
@@ -138,18 +117,18 @@ test('the field is ordered front to back and filters unusable windows', () => {
     { address: '0xc3', title: 'front', focusHistoryID: 0 },
     { address: '0xb2', title: 'middle', focusHistoryID: 1 },
     { address: '0xf6', title: 'never focused', focusHistoryID: -1 },
-    { address: '0xd4', title: 'special', special: true },
+    { address: '0xd4', title: 'scratchpad', special: true, focusHistoryID: 3 },
     { address: '0xe5', title: 'unmapped', mapped: false },
     { address: '0xa9', title: 'no handle', hasHandle: false },
     { address: '', title: 'no address' },
   ], state, 120000);
-  assert.deepEqual(Array.from(field, (e) => e.title), ['front', 'middle', 'oldest', 'never focused']);
-  assert.deepEqual(Array.from(field, (e) => e.index), [0, 1, 2, 3]);
+  assert.deepEqual(Array.from(field, (e) => e.title), ['front', 'middle', 'oldest', 'scratchpad', 'never focused']);
+  assert.deepEqual(Array.from(field, (e) => e.index), [0, 1, 2, 3, 4]);
   close(field[0].depth, 0);
   close(field[1].seconds, 30);
   close(field[1].depth, 1);
   close(field[2].seconds, 60);
-  close(field[3].depth, 8);
+  close(field[4].depth, 8);
   assert.equal(field[0].address, 'c3');
 });
 
@@ -236,15 +215,229 @@ test('the focused window stays in front of the one that just lost focus', () => 
   close(field[1].seconds, 0);
 });
 
-test('planes recede toward the vanishing point and peek past the front plane', () => {
-  const front = Depth.planeCenter(400, 300, 736, 60, 1, 0, 6, 4);
-  close(front.x, 400);
-  close(front.y, 300);
-  const deep = Depth.planeCenter(400, 300, 736, 60, 0.5, 2, 6, 4);
-  close(deep.x, 400 + 0.5 * 336 + 12);
-  close(deep.y, 300 - 0.5 * 240 - 8);
-  // Right edge of a plane of width 448 at scale 0.5 passes the front plane's right edge.
-  assert.ok(deep.x + 0.5 * 448 / 2 > front.x + 448 / 2);
-  const passed = Depth.planeCenter(400, 300, 736, 60, 1.2, -1, 6, 4);
-  assert.ok(passed.x < 400 && passed.y > 300);
+// ------------------------------------------------------------ Field.js
+
+const entry = (address, extra = {}) => Object.assign({
+  address, appId: 'foot', appName: 'Foot', title: `Window ${address}`,
+  workspaceId: 1, workspaceName: '1', seconds: 10, active: false,
+}, extra);
+
+test('app names come from the desktop entry, else from the app id', () => {
+  assert.equal(Field.appName('com.anthropic.Claude', ''), 'Claude');
+  assert.equal(Field.appName('dev.zed.Zed'), 'Zed');
+  assert.equal(Field.appName('brave-origin'), 'Brave Origin');
+  assert.equal(Field.appName('org.gnome.Nautilus', 'Files'), 'Files');
+  assert.equal(Field.appName('', ''), '');
+  assert.equal(Field.appName('steam'), 'Steam');
+});
+
+test('ages read naturally, long and short', () => {
+  assert.equal(Field.ageLabel(0, true), 'focused');
+  assert.equal(Field.ageLabel(4), 'just now');
+  assert.equal(Field.ageLabel(42), '42 s ago');
+  assert.equal(Field.ageLabel(185), '3 min ago');
+  assert.equal(Field.ageLabel(7300), '2 h ago');
+  assert.equal(Field.ageLabel(200000), '2 d ago');
+  assert.equal(Field.ageLabel(Infinity), 'not used yet');
+  assert.equal(Field.ageShort(0, true), 'now');
+  assert.equal(Field.ageShort(42), '42s');
+  assert.equal(Field.ageShort(185), '3m');
+  assert.equal(Field.ageShort(Infinity), '');
+});
+
+test('workspace labels name scratchpads and named workspaces', () => {
+  assert.equal(Field.workspaceLabel('3', 3), '3');
+  assert.equal(Field.workspaceLabel('special:term', -98), 'term');
+  assert.equal(Field.workspaceLabel('special', -99), 'scratchpad');
+  assert.equal(Field.workspaceLabel('name:web', -1337), 'web');
+  assert.equal(Field.workspaceLabel('', 4), '4');
+  assert.equal(Field.isSpecialName('special:x'), true);
+  assert.equal(Field.isSpecialName('named'), false);
+});
+
+test('the filter matches every token in app, title or workspace', () => {
+  const brave = entry('a1', { appName: 'Brave', appId: 'brave-browser', title: 'Omarchy plugins' });
+  assert.equal(Field.matchesQuery(brave, ''), true);
+  assert.equal(Field.matchesQuery(brave, 'BRA'), true);
+  assert.equal(Field.matchesQuery(brave, 'brave omarchy'), true);
+  assert.equal(Field.matchesQuery(brave, 'omarchy brave'), true);
+  assert.equal(Field.matchesQuery(brave, 'brave zed'), false);
+  assert.equal(Field.matchesQuery(entry('b2', { workspaceName: 'special:term' }), 'term'), true);
+});
+
+test('the visible order drops closed windows and filter misses', () => {
+  const entries = [entry('a1', { title: 'alpha' }), entry('b2', { title: 'beta' }), entry('c3', { title: 'alpine' })];
+  assert.deepEqual(Array.from(Field.visibleOrder(entries, {}, '')), [0, 1, 2]);
+  assert.deepEqual(Array.from(Field.visibleOrder(entries, { b2: true }, '')), [0, 2]);
+  assert.deepEqual(Array.from(Field.visibleOrder(entries, {}, 'alp')), [0, 2]);
+  assert.deepEqual(Array.from(Field.slotsFor([0, 2], 3)), [0, -1, 1]);
+});
+
+test('Tab wraps, arrows and the wheel stop at the ends', () => {
+  const order = [0, 2, 5];
+  assert.equal(Field.step(order, 0, 1, true), 2);
+  assert.equal(Field.step(order, 5, 1, true), 0);
+  assert.equal(Field.step(order, 0, -1, true), 5);
+  assert.equal(Field.step(order, 5, 1, false), 5);
+  assert.equal(Field.step(order, 0, -3, false), 0);
+  assert.equal(Field.step(order, 0, 5, false), 5);
+  // A selection that is not visible restarts at the front.
+  assert.equal(Field.step(order, 1, 1, true), 0);
+  assert.equal(Field.step([], 0, 1, true), -1);
+  assert.equal(Field.first(order), 0);
+  assert.equal(Field.last(order), 5);
+});
+
+test('a hidden selection moves to the nearest window behind it', () => {
+  assert.equal(Field.reselect([0, 2, 3], 2, [0, 1, 2, 3]), 2);
+  assert.equal(Field.reselect([0, 3], 2, [0, 1, 2, 3]), 3);
+  assert.equal(Field.reselect([0, 1], 3, [0, 1, 2, 3]), 1);
+  assert.equal(Field.reselect([4], 9, []), 4);
+  assert.equal(Field.reselect([], 1, [0, 1]), -1);
+});
+
+test('workspaces group in map order with scratchpads last and empty screens kept', () => {
+  const entries = [
+    entry('a1', { workspaceId: 3, workspaceName: '3' }),
+    entry('b2', { workspaceId: -98, workspaceName: 'special:term' }),
+    entry('c3', { workspaceId: 1, workspaceName: '1' }),
+    entry('d4', { workspaceId: 3, workspaceName: '3' }),
+    entry('e5', { workspaceId: -1337, workspaceName: 'name:web' }),
+  ];
+  const groups = Field.workspaceGroups(entries, [{ id: 2, name: '2', monitor: 'DP-1' }], [2]);
+  assert.deepEqual(Array.from(groups, (g) => g.label), ['1', '2', '3', 'web', 'term']);
+  assert.deepEqual(Array.from(groups[2].entries), [0, 3]);
+  assert.equal(groups[1].entries.length, 0);
+  assert.equal(groups[1].onScreen, true);
+  assert.equal(groups[4].special, true);
+});
+
+test('left and right step between workspaces, digits jump to one', () => {
+  const entries = [
+    entry('a1', { workspaceId: 2, workspaceName: '2' }),
+    entry('b2', { workspaceId: 1, workspaceName: '1' }),
+    entry('c3', { workspaceId: 4, workspaceName: '4' }),
+    entry('d4', { workspaceId: 1, workspaceName: '1' }),
+  ];
+  const groups = Field.workspaceGroups(entries, [], []);
+  const order = [0, 1, 2, 3];
+  assert.equal(Field.neighborWorkspace(groups, order, 0, 1), 2);
+  assert.equal(Field.neighborWorkspace(groups, order, 0, -1), 1);
+  assert.equal(Field.neighborWorkspace(groups, order, 1, -1), 1);
+  assert.equal(Field.neighborWorkspace(groups, order, 2, 1), 2);
+  // A workspace whose windows are all filtered out is skipped.
+  assert.equal(Field.neighborWorkspace(groups, [1, 2, 3], 1, 1), 2);
+  assert.equal(Field.workspaceByNumber(groups, order, 1), 1);
+  assert.equal(Field.workspaceByNumber(groups, order, 4), 2);
+  assert.equal(Field.workspaceByNumber(groups, order, 9), -1);
+});
+
+test('a wheel notch is one window, touchpad pixels add up', () => {
+  assert.deepEqual(Object.assign({}, Field.wheelSteps(0, -120, 0)), { steps: 1, rest: 0 });
+  assert.deepEqual(Object.assign({}, Field.wheelSteps(0, 240, 0)), { steps: -2, rest: 0 });
+  assert.deepEqual(Object.assign({}, Field.wheelSteps(0, -60, 0)), { steps: 0, rest: -60 });
+  assert.deepEqual(Object.assign({}, Field.wheelSteps(-60, -60, 0)), { steps: 1, rest: 0 });
+  const slow = Field.wheelSteps(0, 0, -25);
+  assert.equal(slow.steps, 0);
+  const more = Field.wheelSteps(slow.rest, 0, -40);
+  assert.equal(more.steps, 1);
+  close(more.rest, -5);
+  assert.equal(Field.wheelSteps(0, 0, 0).steps, 0);
+});
+
+// ------------------------------------------------------------ Layout.js
+
+const stage = Layout.deepStage(1600, 1000, 70, 320, 1.6);
+
+test('the stage fits the front card and the stack behind it into the Deep', () => {
+  close(stage.frontWidth / stage.frontHeight, 1.6, 1e-6);
+  const back = Layout.deepPlane(stage, Layout.VISIBLE_STEPS);
+  assert.ok(back.y - back.height / 2 >= 70 - 1e-6, 'the last card stays below the top');
+  assert.ok(stage.frontY + stage.frontHeight / 2 <= 1000 - 320 + 1e-6, 'the front card stays above the caption');
+  assert.ok(back.x + back.width / 2 <= 1600, 'the last card stays on screen');
+  const left = stage.frontX - stage.frontWidth / 2;
+  const right = back.x + back.width / 2;
+  close(left, 1600 - right, 1e-6);
+  // Very wide screens do not blow the front card up past half the width.
+  const wide = Layout.deepStage(3440, 1440, 70, 400, 3440 / 1440);
+  assert.ok(wide.frontWidth <= 3440 * 0.5 + 1e-6);
+});
+
+test('cards recede up and to the right, each showing its header above the one in front', () => {
+  const front = Layout.deepPlane(stage, 0);
+  close(front.x, stage.frontX);
+  close(front.y, stage.frontY);
+  close(front.width, stage.frontWidth);
+  assert.equal(front.opacity, 1);
+  let previous = front;
+  for (let r = 1; r <= Layout.VISIBLE_STEPS; r++) {
+    const card = Layout.deepPlane(stage, r);
+    const top = card.y - card.height / 2;
+    const previousTop = previous.y - previous.height / 2;
+    assert.ok(previousTop - top >= 24, `card ${r} shows at least a 24 px header strip (${previousTop - top})`);
+    assert.ok(card.x + card.width / 2 > previous.x + previous.width / 2, `card ${r} shows a band on the right`);
+    assert.ok(card.width < previous.width && card.z < previous.z);
+    previous = card;
+  }
+  assert.equal(Layout.deepPlane(stage, Layout.VISIBLE_STEPS + 1).opacity, 0);
+});
+
+test('the camera moves continuously and passed cards fade out', () => {
+  const at = Layout.deepPlane(stage, 0);
+  const before = Layout.deepPlane(stage, -1e-6);
+  const after = Layout.deepPlane(stage, 1e-6);
+  close(before.x, at.x, 1e-3);
+  close(after.x, at.x, 1e-3);
+  close(before.width, at.width, 1e-3);
+  close(after.y, at.y, 1e-3);
+  const passed = Layout.deepPlane(stage, -0.3);
+  assert.ok(passed.x < at.x && passed.width > at.width && passed.opacity < 1 && passed.z > at.z);
+  assert.equal(Layout.deepPlane(stage, -Layout.PASSED_FADE).opacity, 0);
+});
+
+test('windows fit their card without distortion', () => {
+  const portrait = Layout.fit(800, 500, 0.8);
+  close(portrait.height, 500);
+  close(portrait.width, 400);
+  close(portrait.x, 200);
+  const wide = Layout.fit(800, 500, 3.2);
+  close(wide.width, 800);
+  close(wide.height, 250);
+  close(wide.y, 125);
+});
+
+test('minimaps show the screen and the windows parked beside it', () => {
+  const viewport = { x: 0, y: 0, width: 1600, height: 1000 };
+  const bounds = Layout.minimapBounds(viewport, [{ x: 0, y: 0, width: 1600, height: 1000 }, { x: 1600, y: 0, width: 800, height: 1000 }]);
+  assert.deepEqual(Object.assign({}, bounds), { x: 0, y: 0, width: 2400, height: 1000 });
+  // Never wider than three screens.
+  const far = Layout.minimapBounds(viewport, [{ x: 9000, y: 0, width: 800, height: 1000 }]);
+  close(far.width, 4800);
+  const items = Layout.minimapItems(viewport, [{ x: 0, y: 0, width: 800, height: 1000 }, { x: 800, y: 0, width: 800, height: 1000 }], 160, 100);
+  close(items.rects[0].width, 80);
+  close(items.rects[1].x, 80);
+  close(items.viewport.width, 160);
+});
+
+test('tabs of a group split their rectangle, unknown geometry falls back to a grid', () => {
+  const viewport = { x: 0, y: 0, width: 1600, height: 1000 };
+  const same = { x: 0, y: 0, width: 1600, height: 1000 };
+  const grouped = Layout.minimapItems(viewport, [same, Object.assign({}, same), Object.assign({}, same)], 160, 100);
+  close(grouped.rects[0].width, 160 / 3);
+  close(grouped.rects[2].x, 320 / 3);
+  const grid = Layout.minimapItems(viewport, [same, null, same, same], 160, 100);
+  assert.equal(grid.viewport, null);
+  assert.equal(grid.rects.length, 4);
+  for (const rect of grid.rects) assert.ok(rect.x >= 0 && rect.x + rect.width <= 160 + 1e-6 && rect.y + rect.height <= 100 + 1e-6);
+});
+
+test('map cards follow their aspect and shrink together when the row is full', () => {
+  const roomy = Layout.mapCards([1.6, 2.4], 2000, 100, 10, 16, 80);
+  close(roomy.widths[0], 176);
+  close(roomy.widths[1], 256);
+  assert.equal(roomy.scale, 1);
+  const full = Layout.mapCards([1.6, 1.6, 1.6, 1.6], 500, 100, 10, 16, 80);
+  const total = full.widths.reduce((a, b) => a + b, 0) + 30;
+  assert.ok(total <= 500 + 1e-6);
+  assert.ok(full.height < 100);
 });

@@ -9,6 +9,7 @@ import FathomTest
 import Quickshell.Hyprland
 import "../src"
 import "../src/Depth.js" as Depth
+import "../src/Layout.js" as Layout
 
 TestCase {
   id: testCase
@@ -88,7 +89,11 @@ TestCase {
     compare(rows[2].address, "0xc3")
     fuzzyCompare(rows[1].depth, 1, 0.01)
     fuzzyCompare(rows[2].depth, Math.log(3) / Math.LN2, 0.01)
-    compare(rows[0].scale, 1)
+    compare(rows[0].fog, 0)
+    fuzzyCompare(rows[1].fog, Depth.fogForDepth(1), 0.01)
+    compare(rows[0].age, "focused")
+    compare(rows[1].age, "30 s ago")
+    compare(rows[1].app, "Foot")
   }
 
   function test_seed_waits_for_the_client_list() {
@@ -239,47 +244,49 @@ TestCase {
     compare(JSON.parse(FakeSystem.ipc("fathom").state()).trackedWindows, 2)
   }
 
-  function test_unusable_windows_are_left_out() {
+  function test_unusable_windows_are_left_out_and_scratchpads_kept() {
+    const scratch = toplevel("b2", -98, 1)
+    scratch.workspace = { id: -98, name: "special:term" }
     setUpDesktop([
       toplevel("a1", 1, 0),
-      toplevel("b2", -98, 1),
+      scratch,
       toplevel("c3", 1, 2, { mapped: false }),
       toplevel("d4", 1, 3, { noHandle: true }),
       toplevel("e5", 3, 4)
     ])
     const fathom = createFathom()
     FakeSystem.ipc("fathom").open()
-    compare(fathom.field.length, 2)
-    compare(fathom.field[1].address, "e5")
+    compare(fathom.field.length, 3)
+    compare(fathom.field[1].address, "b2")
+    compare(fathom.field[2].address, "e5")
+    const labels = fathom.groups.map(group => group.label)
+    compare(labels, ["1", "3", "term"])
   }
 
-  function test_planes_apply_depth_to_scale_and_opacity() {
+  function test_cards_recede_and_the_camera_follows() {
     const fathom = createFathom()
     FakeSystem.ipc("fathom").open()
     tryCompare(fathom.fieldView, "planeCount", 3)
     const front = fathom.fieldView.planeAt(0)
     const middle = fathom.fieldView.planeAt(1)
     const back = fathom.fieldView.planeAt(2)
-    fuzzyCompare(front.scale, 1, 1e-6)
+    const stage = fathom.fieldView.stage
+    fuzzyCompare(front.width, stage.frontWidth, 1e-3)
     fuzzyCompare(front.opacity, 1, 1e-6)
-    fuzzyCompare(middle.scale, Depth.scaleForDepth(1), 1e-3)
-    fuzzyCompare(middle.opacity, Depth.opacityForDepth(1), 1e-3)
-    fuzzyCompare(back.scale, Depth.scaleForDepth(Math.log(3) / Math.LN2), 1e-3)
-    verify(back.z < middle.z && middle.z < front.z, "front planes draw on top")
-    verify(middle.x + middle.width / 2 > front.x + front.width / 2, "deeper planes recede to the right")
-    verify(middle.y + middle.height / 2 < front.y + front.height / 2, "deeper planes recede upward")
-    const frontRight = front.x + front.width / 2 + front.width * front.scale / 2
-    const middleRight = middle.x + middle.width / 2 + middle.width * middle.scale / 2
-    const backRight = back.x + back.width / 2 + back.width * back.scale / 2
-    verify(middleRight > frontRight && backRight > middleRight, "every deeper plane shows past the one in front")
+    fuzzyCompare(middle.width, stage.frontWidth * Layout.SIZE_Q, 1e-3)
+    verify(back.z < middle.z && middle.z < front.z, "front cards draw on top")
+    verify(middle.x + middle.width > front.x + front.width && back.x + back.width > middle.x + middle.width,
+      "every deeper card shows a band past the one in front")
+    verify(middle.y < front.y && back.y < middle.y, "every deeper card shows its header above the one in front")
+    verify(middle.fog > 0 && front.fog === 0, "cards behind the camera wear fog")
 
-    // Diving to the middle window: it reaches full size, the front one fades out.
+    // Diving to the middle window: it reaches the front, the front card flies past.
     FakeSystem.press("fathom", "next")
-    tryVerify(function() { return Math.abs(middle.scale - 1) < 1e-3 }, 1000)
+    tryVerify(function() { return Math.abs(middle.width - stage.frontWidth) < 1e-3 }, 1000)
     tryVerify(function() { return front.opacity < 1e-3 }, 1000)
-    verify(!front.visible, "a passed plane stops drawing")
-    fuzzyCompare(back.scale, Depth.scaleForDepth(Math.log(3) / Math.LN2 - 1), 1e-3)
+    verify(!front.visible, "a passed card stops drawing")
     verify(middle.selected)
+    compare(middle.fog, 0)
   }
 
   function test_click_on_a_plane_focuses_it() {
@@ -342,9 +349,218 @@ TestCase {
   function test_ipc_state_reports_build_identity() {
     createFathom()
     const state = JSON.parse(FakeSystem.ipc("fathom").state())
-    compare(state.buildIdentity, "0.1.0-phase0")
+    compare(state.buildIdentity, "0.2.0-deep")
     compare(state.opened, false)
     compare(state.usingLua, true)
     compare(state.trackedWindows, 3)
+  }
+
+  // ------------------------------------------------------------ 0.2 input
+
+  function openHeld(fathom) {
+    FakeSystem.press("fathom", "next")
+    tryVerify(function() { return fathom.fieldView.activeFocus || testCase.Window.activeFocusItem !== null })
+    wait(0)
+  }
+
+  function test_arrows_dive_and_stop_at_the_ends() {
+    const fathom = createFathom()
+    openHeld(fathom)
+    compare(fathom.selectedIndex, 1)
+    keyPress(Qt.Key_Down)
+    compare(fathom.selectedIndex, 2)
+    keyPress(Qt.Key_Down)
+    compare(fathom.selectedIndex, 2, "arrows stop at the far end")
+    keyPress(Qt.Key_Up, Qt.AltModifier)
+    compare(fathom.selectedIndex, 1, "with Alt held too")
+    keyPress(Qt.Key_Home)
+    compare(fathom.selectedIndex, 0)
+    keyPress(Qt.Key_Up)
+    compare(fathom.selectedIndex, 0, "and at the front")
+    keyPress(Qt.Key_End)
+    compare(fathom.selectedIndex, 2)
+    keyPress(Qt.Key_Tab)
+    compare(fathom.selectedIndex, 0, "Tab still wraps")
+    keyPress(Qt.Key_PageDown)
+    compare(fathom.selectedIndex, 2)
+    keyRelease(Qt.Key_Alt)
+    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
+  }
+
+  function test_left_right_and_digits_move_between_workspaces() {
+    const fathom = createFathom()
+    openHeld(fathom)
+    compare(fathom.selectedIndex, 1)
+    keyPress(Qt.Key_Right, Qt.AltModifier)
+    compare(fathom.selectedIndex, 2, "workspace 2's most recent window")
+    keyPress(Qt.Key_Right)
+    compare(fathom.selectedIndex, 2, "no workspace further right")
+    keyPress(Qt.Key_Left)
+    compare(fathom.selectedIndex, 0, "workspace 1's most recent window")
+    // keyPress, not keyClick: keyClick would also release Alt, which commits.
+    keyPress(Qt.Key_2, Qt.AltModifier)
+    compare(fathom.selectedIndex, 2)
+    keyClick(Qt.Key_1)
+    compare(fathom.selectedIndex, 0)
+    keyClick(Qt.Key_7)
+    compare(fathom.selectedIndex, 0, "an empty workspace number changes nothing")
+    verify(fathom.opened)
+  }
+
+  function test_typing_filters_and_escape_clears_first() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    wait(0)
+    keyClick(Qt.Key_C)
+    compare(fathom.filterText, "c")
+    compare(fathom.order, [2], "only Window c3 matches")
+    compare(fathom.selectedIndex, 2, "the best match is selected")
+    keyClick(Qt.Key_3)
+    compare(fathom.filterText, "c3", "digits join a filter being typed")
+    keyClick(Qt.Key_Z)
+    compare(fathom.order.length, 0)
+    compare(fathom.selectedIndex, -1)
+    keyPress(Qt.Key_Return)
+    verify(fathom.opened, "Enter with nothing shown does nothing")
+    keyPress(Qt.Key_Backspace)
+    compare(fathom.filterText, "c3")
+    compare(fathom.selectedIndex, 2)
+    keyPress(Qt.Key_Escape)
+    compare(fathom.filterText, "")
+    verify(fathom.opened, "the first Escape clears the filter")
+    compare(fathom.order.length, 3)
+    keyPress(Qt.Key_Escape)
+    verify(!fathom.opened)
+    wait(250)
+    compare(Hyprland.dispatches.length, 0)
+  }
+
+  function test_alt_letters_filter_while_holding() {
+    const fathom = createFathom()
+    openHeld(fathom)
+    // Alt+letter can arrive without text; the key code stands in for it.
+    fathom.handleKey(Qt.Key_B, Qt.AltModifier, "")
+    compare(fathom.filterText, "b")
+    compare(fathom.selectedIndex, 1)
+    FakeSystem.press("fathom", "release")
+    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xb2" })'], 1000)
+  }
+
+  function test_release_with_nothing_matching_cancels() {
+    const fathom = createFathom()
+    openHeld(fathom)
+    fathom.setFilter("nothing like this")
+    FakeSystem.press("fathom", "release")
+    verify(!fathom.opened)
+    wait(250)
+    compare(Hyprland.dispatches.length, 0)
+  }
+
+  function test_space_keeps_the_field_open_after_alt() {
+    const fathom = createFathom()
+    openHeld(fathom)
+    keyPress(Qt.Key_Space, Qt.AltModifier)
+    verify(fathom.pinned)
+    compare(fathom.mode, "browse")
+    FakeSystem.press("fathom", "release")
+    keyRelease(Qt.Key_Alt)
+    verify(fathom.opened, "releasing Alt no longer commits")
+    FakeSystem.press("fathom", "next")
+    compare(fathom.mode, "browse", "a chord step keeps a pinned field pinned")
+    compare(fathom.selectedIndex, 2)
+    keyPress(Qt.Key_Return)
+    verify(!fathom.opened)
+    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
+  }
+
+  function test_wheel_and_touchpad_dive() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    mouseWheel(fathom.fieldView, 20, 20, 0, -120)
+    compare(fathom.selectedIndex, 1, "a notch down dives one window")
+    mouseWheel(fathom.fieldView, 20, 20, 0, 120)
+    compare(fathom.selectedIndex, 0, "a notch up rises one")
+    // Touchpad pixels add up before they step.
+    fathom.wheel(0, -30, 0, 0)
+    compare(fathom.selectedIndex, 0)
+    fathom.wheel(0, -40, 0, 0)
+    compare(fathom.selectedIndex, 1)
+    // Sideways moves between workspaces.
+    fathom.wheel(0, 0, -120, 0)
+    compare(fathom.selectedIndex, 2)
+  }
+
+  function test_a_window_that_closes_leaves_the_field() {
+    const fathom = createFathom()
+    openHeld(fathom)
+    compare(fathom.selectedIndex, 1)
+    Hyprland.rawEvent({ name: "closewindow", data: "b2" })
+    compare(fathom.order, [0, 2])
+    compare(fathom.selectedIndex, 2, "the selection moves to the window behind")
+    // The same when the toplevel list changes without an event.
+    Hyprland.toplevels = { values: [Hyprland.toplevels.values[0], Hyprland.toplevels.values[2]] }
+    verify(fathom.opened)
+    FakeSystem.press("fathom", "release")
+    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
+  }
+
+  function test_no_focus_request_for_a_window_gone_before_it() {
+    const fathom = createFathom()
+    openHeld(fathom)
+    FakeSystem.press("fathom", "release")
+    verify(!fathom.opened)
+    // b2 closes during the short wait for the overlay to go.
+    Hyprland.toplevels = { values: [Hyprland.toplevels.values[0], Hyprland.toplevels.values[2]] }
+    wait(250)
+    compare(Hyprland.dispatches.length, 0)
+  }
+
+  function test_quick_alt_tab_never_reveals_the_field() {
+    const fathom = createFathom()
+    FakeSystem.press("fathom", "next")
+    verify(fathom.opened)
+    verify(!fathom.revealed, "hold mode waits before drawing")
+    compare(fathom.fieldView.opacity, 0)
+    FakeSystem.press("fathom", "release")
+    verify(!fathom.revealed)
+    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xb2" })'], 1000)
+    FakeSystem.press("fathom", "next")
+    tryVerify(function() { return fathom.revealed }, 1000, "a held switch draws after the delay")
+    FakeSystem.ipc("fathom").cancel()
+    FakeSystem.ipc("fathom").open()
+    verify(fathom.revealed, "browsing draws at once")
+  }
+
+  function test_map_hover_selects_only_after_the_pointer_moves() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    const tile = fathom.fieldView.map.tileFor(2)
+    verify(tile !== null, "workspace 2 shows window c3")
+    tryVerify(function() { return tile.width > 4 })
+    // The first pointer event only primes: a pointer resting there when the
+    // field opened selects nothing.
+    mouseMove(tile, tile.width / 2, tile.height / 2)
+    compare(fathom.selectedIndex, 0)
+    mouseMove(tile, tile.width / 2 + 4, tile.height / 2 + 1)
+    compare(fathom.selectedIndex, 2)
+    mouseClick(tile, tile.width / 2, tile.height / 2)
+    tryVerify(function() { return !fathom.opened }, 1000)
+    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
+  }
+
+  function test_map_shows_every_workspace() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    compare(fathom.groups.length, 2)
+    compare(fathom.groups[0].label, "1")
+    compare(fathom.groups[0].entries, [0, 1])
+    compare(fathom.groups[0].onScreen, true)
+    compare(fathom.groups[1].entries, [2])
+    compare(fathom.groups[1].onScreen, false)
+    const state = JSON.parse(FakeSystem.ipc("fathom").state())
+    compare(state.workspaces, 2)
+    compare(state.shown, 3)
   }
 }

@@ -21,6 +21,9 @@ Item {
   // Bumped on every change; the state object itself is mutated in place.
   property int revision: 0
 
+  // A window closed (socket2 closewindow); the field drops it at once.
+  signal windowClosed(string address)
+
   function secondsSince(address, nowMs, fallbackActive) {
     return Recency.secondsSince(tracker.recencyState, address, nowMs, fallbackActive)
   }
@@ -79,7 +82,10 @@ Item {
       // class and title.
       if (name === "activewindowv2") changed = Recency.recordFocus(tracker.recencyState, event.data, Date.now())
       else if (name === "openwindow") changed = Recency.recordOpen(tracker.recencyState, event.data, Date.now())
-      else if (name === "closewindow") changed = Recency.recordClose(tracker.recencyState, event.data)
+      else if (name === "closewindow") {
+        changed = Recency.recordClose(tracker.recencyState, event.data)
+        if (changed) tracker.windowClosed(Recency.firstField(event.data))
+      }
       if (changed) tracker.revision++
     }
   }

@@ -2,6 +2,7 @@
 // plain item instead of a layer-shell window.
 
 import QtQuick
+import FathomTest
 
 Item {
   id: surface
@@ -10,9 +11,9 @@ Item {
   readonly property alias view: view
 
   // The offscreen platform's screen is 800x600; pointer events outside it
-  // are dropped.
-  width: 800
-  height: 600
+  // are dropped. Renders ask for a real screen size instead.
+  width: FakeSystem.surfaceWidth
+  height: FakeSystem.surfaceHeight
   visible: controller !== null && controller.opened
 
   onVisibleChanged: if (visible) Qt.callLater(view.focusKeys)

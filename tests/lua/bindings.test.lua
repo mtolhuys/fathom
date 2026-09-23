@@ -1,26 +1,56 @@
 -- Loads hypr/fathom.lua against a recording mock of Hyprland's `hl` table and
--- checks what it binds and what the raw key hook forwards.
+-- checks what it binds, the submap it holds while Alt is down, what the raw
+-- key hook forwards, and that loading it twice replaces the first load.
 --
 --   lua tests/lua/bindings.test.lua hypr/fathom.lua
 
 local path = arg[1] or "hypr/fathom.lua"
 
-local calls = { unbind = {}, bind = {}, on = {}, dispatch = {}, layer_rule = {} }
+local state = { submap = "", binds = {}, hooks = {}, unbind = {}, dispatch = {}, layer_rule = {} }
+
+local function removable(list, item)
+  item.active = true
+  item.remove = function(self)
+    self.active = false
+  end
+  table.insert(list, item)
+  return item
+end
+
+local defining = nil
 
 hl = {
   dsp = {
     global = function(name) return { kind = "global", name = name } end,
+    submap = function(name) return { kind = "submap", name = name } end,
   },
-  unbind = function(keys) table.insert(calls.unbind, keys) end,
-  bind = function(keys, dispatcher, options)
-    table.insert(calls.bind, { keys = keys, dispatcher = dispatcher, options = options or {} })
+  unbind = function(keys)
+    table.insert(state.unbind, keys)
+    for _, bind in ipairs(state.binds) do
+      if bind.keys == keys and bind.submap == "" then bind.active = false end
+    end
   end,
-  on = function(event, handler) table.insert(calls.on, { event = event, handler = handler }) end,
-  dispatch = function(dispatcher) table.insert(calls.dispatch, dispatcher) end,
-  layer_rule = function(rule) table.insert(calls.layer_rule, rule) end,
+  bind = function(keys, dispatcher, options)
+    return removable(state.binds, { keys = keys, dispatcher = dispatcher, options = options or {}, submap = defining or "" })
+  end,
+  define_submap = function(name, body)
+    defining = name
+    body()
+    defining = nil
+  end,
+  get_current_submap = function() return state.submap end,
+  on = function(event, handler)
+    return removable(state.hooks, { event = event, handler = handler })
+  end,
+  dispatch = function(dispatcher)
+    table.insert(state.dispatch, dispatcher)
+    if dispatcher.kind == "submap" then state.submap = dispatcher.name == "reset" and "" or dispatcher.name end
+  end,
+  layer_rule = function(rule)
+    table.insert(state.layer_rule, rule)
+    return rule
+  end,
 }
-
-dofile(path)
 
 local failures = 0
 local function check(condition, message)
@@ -32,32 +62,89 @@ local function check(condition, message)
   end
 end
 
-check(#calls.unbind == 2 and calls.unbind[1] == "ALT + TAB" and calls.unbind[2] == "ALT + SHIFT + TAB",
+local function active(submap)
+  local found = {}
+  for _, bind in ipairs(state.binds) do
+    if bind.active and bind.submap == submap then found[bind.keys] = bind end
+  end
+  return found
+end
+
+local function count(map)
+  local n = 0
+  for _ in pairs(map) do n = n + 1 end
+  return n
+end
+
+local function sent(names)
+  local list = {}
+  for _, dispatcher in ipairs(state.dispatch) do
+    if dispatcher.kind == "global" then table.insert(list, dispatcher.name) end
+  end
+  return table.concat(list, " ") == table.concat(names, " ")
+end
+
+local function press(keys)
+  local bind = active(state.submap)[keys]
+  if bind then bind.dispatcher() end
+  return bind ~= nil
+end
+
+local function hook()
+  for _, item in ipairs(state.hooks) do
+    if item.active then return item.handler end
+  end
+  return function() end
+end
+
+dofile(path)
+
+check(#state.unbind == 2 and state.unbind[1] == "ALT + TAB" and state.unbind[2] == "ALT + SHIFT + TAB",
   "clears both default Alt-Tab chords")
 
-local binds = {}
-for _, bind in ipairs(calls.bind) do binds[bind.keys] = bind end
-check(binds["ALT + TAB"] and binds["ALT + TAB"].dispatcher.name == "fathom:next", "ALT+TAB sends fathom:next")
-check(binds["ALT + SHIFT + TAB"] and binds["ALT + SHIFT + TAB"].dispatcher.name == "fathom:previous",
-  "ALT+SHIFT+TAB sends fathom:previous")
-check(binds["ALT + TAB"] and binds["ALT + TAB"].options.repeating == true, "holding Tab keeps diving")
+local default = active("")
+check(count(default) == 2 and default["ALT + TAB"] and default["ALT + SHIFT + TAB"], "binds ALT+TAB and ALT+SHIFT+TAB")
+check(default["ALT + TAB"].options.repeating == true, "holding Tab keeps diving")
 
-check(#calls.on == 1 and calls.on[1].event == "input.keyboard.key", "registers one raw key hook")
-local hook = calls.on[1] and calls.on[1].handler or function() end
+local submap = active("fathom")
+check(count(submap) == 2 and submap["ALT + TAB"] and submap["ALT + SHIFT + TAB"],
+  "the fathom submap binds only the two chords, so other Alt chords reach the overlay")
 
 local RELEASED, PRESSED = 0, 1
-hook(64, 0, PRESSED)
-check(#calls.dispatch == 0, "pressing Alt forwards nothing")
-hook(23, 0, PRESSED)
-hook(23, 0, RELEASED)
-check(#calls.dispatch == 0, "Tab press and release forward nothing")
-hook(64, 0, RELEASED)
-check(#calls.dispatch == 1 and calls.dispatch[1].name == "fathom:release", "releasing Alt_L sends fathom:release")
-hook(108, 0, RELEASED)
-check(#calls.dispatch == 2 and calls.dispatch[2].name == "fathom:release", "releasing Alt_R sends fathom:release")
+hook()(64, 0, PRESSED)
+hook()(64, 0, RELEASED)
+check(#state.dispatch == 0, "an Alt tap outside a switch forwards nothing")
 
-check(#calls.layer_rule == 1 and calls.layer_rule[1].match.namespace == "^fathom$"
-  and calls.layer_rule[1].no_anim == true, "disables the layer fade for the fathom namespace")
+press("ALT + TAB")
+check(sent({ "fathom:next" }) and state.submap == "fathom", "ALT+TAB sends fathom:next and enters the fathom submap")
+local entered = #state.dispatch
+press("ALT + TAB")
+check(sent({ "fathom:next", "fathom:next" }) and #state.dispatch == entered + 1,
+  "a second Tab in the submap sends fathom:next without re-entering it")
+press("ALT + SHIFT + TAB")
+check(sent({ "fathom:next", "fathom:next", "fathom:previous" }), "ALT+SHIFT+TAB sends fathom:previous")
+hook()(23, 0, RELEASED)
+check(state.submap == "fathom", "releasing Tab keeps the submap")
+hook()(64, 0, RELEASED)
+check(sent({ "fathom:next", "fathom:next", "fathom:previous", "fathom:release" }) and state.submap == "",
+  "releasing Alt_L leaves the submap and sends fathom:release")
+
+press("ALT + TAB")
+hook()(108, 0, RELEASED)
+check(state.submap == "" and state.dispatch[#state.dispatch].name == "fathom:release",
+  "releasing Alt_R does the same")
+
+check(#state.layer_rule == 1 and state.layer_rule[1].match.namespace == "^fathom$"
+  and state.layer_rule[1].no_anim == true and state.layer_rule[1].blur == true,
+  "the fathom layer shows at once, over a blurred background")
+
+-- Loading the file a second time replaces the first load.
+dofile(path)
+local hooks = 0
+for _, item in ipairs(state.hooks) do if item.active then hooks = hooks + 1 end end
+check(count(active("")) == 2 and count(active("fathom")) == 2, "reloading leaves one set of bindings")
+check(hooks == 1, "reloading leaves one raw key hook")
+check(#state.layer_rule == 1, "reloading adds no second layer rule")
 
 if failures > 0 then
   os.exit(1)
