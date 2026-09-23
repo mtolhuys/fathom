@@ -65,13 +65,23 @@ Fathom runs inside Maarten's working session. These hold without exception:
 - Pure logic lives in `src/*.js` (`.pragma library`): `Recency.js` (focus
   times), `Depth.js` (depth and fog), `Field.js` (filter, navigation,
   workspaces, labels), `Layout.js` (the card stack and the map), `Focus.js`
-  (dispatch strings), `Stats.js`. The node tests load the exact same files,
-  so keep them free of Quickshell, and never start a line with `.`.
+  (dispatch strings), `Palette.js` (every color, from the theme), `Stats.js`.
+  The node tests load the exact same files, so keep them free of Quickshell,
+  and never start a line with `.`.
+- Colors come from `FieldView.theme` (`Palette.derive` of the theme's
+  foreground, background, accent and urgent), never from `Color` directly and
+  never from `Color.muted`: every theme must look right light and dark.
+  `tests/fixtures/omarchy-themes.json` holds the palettes Omarchy ships; the
+  node tests hold every one to the contrast floors. Refresh it when Omarchy
+  adds a theme.
 - `src/FieldSurface.qml` is the only file that needs a real layer-shell window;
   the offscreen QML tests swap it for `tests/qml/FieldSurface.qml` and replace
   Quickshell with `tests/qml/stubs`. Keep everything else testable that way.
 - Look at a change before you ship it: `bash tests/qml/render.sh` renders the
-  field offscreen into `screenshots-local/` (git-ignored) at real screen sizes.
+  field offscreen into `screenshots-local/` (git-ignored) at real screen sizes,
+  in dark and light themes over a stand-in desktop. The offscreen renderer is
+  Qt's software one: shadows, glows and blur do not show there (the lab
+  shows them).
 
 ## Checks
 

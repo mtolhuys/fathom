@@ -12,6 +12,7 @@ Item {
 
   property var controller: null
   property var view: null
+  required property var theme
   property real unit: 1
   property real textUnit: unit
 
@@ -70,6 +71,7 @@ Item {
       delegate: WorkspaceCard {
         controller: map.controller
         view: map.view
+        theme: map.theme
         unit: map.unit
         textUnit: map.textUnit
         showMonitor: map.multiMonitor

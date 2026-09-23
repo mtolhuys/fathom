@@ -28,7 +28,22 @@ Phase 1: the product.
 - Windows Hyprland cannot render (parked beside the screen by a scrolling
   layout) show the last frame Fathom saw of them, kept in memory only, or say
   they are off screen.
-- `tests/qml/render.sh` renders the field offscreen for design review.
+- Light themes: every color is derived from the theme's foreground,
+  background, accent and urgent (`src/Palette.js`) and follows a theme switch
+  live. A light theme gets paper cards above a pale veil, a white light from
+  the surface and a haze instead of dark fog. Text tiers are mixed from the
+  theme's own text and background and held to contrast floors in all 22
+  Omarchy themes, also over a busy desktop; a theme's `muted` (pale on light
+  themes, nearly the background on some dark ones) is no longer used for
+  text, and an accent too faint to read is deepened. The veil is denser, so a
+  bright page behind a dark theme (or a dark game behind a light one) no
+  longer shows through the text.
+- The map shows the last frame seen of each window, reusing the cards'
+  snapshots (no capture of its own), and titles where the tiles have room. The
+  window you were on keeps a frame too.
+- App icons load only while shown.
+- `tests/qml/render.sh` renders the field offscreen for design review, in
+  dark and light themes, over a stand-in desktop.
 - Never crash the compositor: the snippet loads once per Lua state and keeps
   no Hyprland object; `bin/load-bindings` is the one way to load it into a
   running Hyprland (checks before and after, stops if Hyprland's PID

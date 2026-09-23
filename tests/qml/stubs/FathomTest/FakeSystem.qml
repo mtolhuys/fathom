@@ -13,6 +13,9 @@ QtObject {
   // Size of the test host for the field (tests/qml/FieldSurface.qml).
   property int surfaceWidth: 800
   property int surfaceHeight: 600
+  // A stand-in desktop behind the field, blurred the way Hyprland blurs the
+  // layer: "light", "dark", or "" for none (renders only).
+  property string backdrop: ""
 
   function reset() {
     shortcuts = []
@@ -20,6 +23,7 @@ QtObject {
     desktopEntries = ({})
     surfaceWidth = 800
     surfaceHeight = 600
+    backdrop = ""
   }
 
   function registerShortcut(shortcut) {

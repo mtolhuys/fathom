@@ -21,7 +21,8 @@ the one you pick is the only thing it asks the compositor to do.
   right, each with its app icon, title and how long ago you used it. Older
   windows sink into the fog.
 - **The map.** A card per workspace (scratchpads included) with a minimap of
-  its windows at their real positions, each with its app icon. You see which
+  its windows at their real positions, each showing the last frame Fathom saw
+  of it (else its app icon) and its title where there is room. You see which
   workspace is on screen, which window is focused, which one wants your
   attention, and what a scrolling layout has parked beside the screen.
 - **The sounding line.** A depth gauge beside the stack, marked in fathoms from
@@ -30,11 +31,15 @@ the one you pick is the only thing it asks the compositor to do.
   the light fades with it. Click or drag along the line to pick a window by
   how long ago you used it.
 - **The caption.** The selection's title, app, workspace, age and depth.
+- **Your theme, light or dark.** Every color comes from the Omarchy theme and
+  follows it live. On a light theme the cards are paper above a pale veil;
+  on a dark one, glass in the dark. Text is held to a readable contrast in
+  every theme Omarchy ships.
 
 A window your scrolling layout parks beside the screen cannot be captured
 (Hyprland does not render it). Fathom shows the last frame it saw of that
 window, marked "last seen", or says it is off screen. Those frames stay in
-memory only.
+memory only, and the map reuses them: it captures nothing of its own.
 
 ## Keys
 

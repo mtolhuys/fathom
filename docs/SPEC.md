@@ -173,9 +173,12 @@ named ones, then scratchpads.
   filtering), whether it is on screen, and the monitor's name when there is
   more than one.
 - The minimap draws the monitor's screen area and every window at its real
-  position and size with its app icon. A scrolling layout's whole strip is
-  shown, compressed; windows parked beside the screen are dimmer. The tabs of
-  a group split their rectangle. Unknown geometry falls back to a grid.
+  position and size, showing the last frame the field saw of it (the card's
+  snapshot, when the tile is at least 36 by 24 units) or else its app icon,
+  and its title where the tile has room (84 by 46 units). A scrolling
+  layout's whole strip is shown, compressed; windows parked beside the screen
+  are dimmer. The tabs of a group split their rectangle. Unknown geometry
+  falls back to a grid.
 - Positions follow Hyprland's client list, which is refreshed when the field
   opens, so the minimap is never older than the field.
 - The selection is filled with the accent, the focused window has a bright
@@ -275,8 +278,11 @@ pointer. To confirm.
 
 - 60 fps target on integrated graphics.
 - Captures exist only while the field is open, and only for cards near the
-  camera; the map draws icons, not captures. Snapshots are grabbed at most once
-  per window per 30 s.
+  camera; the map reuses the cards' snapshots (the same image and texture),
+  never a capture of its own. Snapshots are grabbed at most once per window
+  per 30 s, including the card one step behind the camera (the window you
+  were on), which is captured anyway so stepping back is instant.
+- App icons load only while shown.
 - Per-card blur (the brief's `blur = depth * 6 px`) is not used: the fog
   carries depth, and the compositor's layer blur frosts the background once.
 - The frame probe (a `FrameAnimation` plus the window's `frameSwapped` count)
@@ -297,10 +303,25 @@ pointer. To confirm.
 ## Look **(decision)**
 
 Colors come from Omarchy's theme (`qs.Commons`: foreground, background,
-accent, muted, urgent), text from `Style.font.family` and Omarchy's text size,
-corner radii from Hyprland's rounding. The backdrop is the theme background at
-66 to 90 % from top to bottom, over a compositor blur (`hl.layer_rule` with
-`blur = true`).
+accent, urgent), derived by `src/Palette.js` and re-derived when the theme
+changes; text from `Style.font.family` and Omarchy's text size, corner radii
+from Hyprland's rounding.
+
+- A theme is light when its background is lighter than its text. Dark: glass
+  cards lit from above, fog into the dark, the scene darkening as you dive.
+  Light: paper cards above a pale veil, a white light from the surface, a
+  haze (fog at 70 %), the scene dimming toward the text color as you dive.
+- Text tiers are mixed from the theme's text toward its background and held
+  to floors: secondary 5.5:1 on the background and 4.5:1 on the lightest
+  card, tertiary 4.5:1. `muted` is not used: it is a pale border tone on light
+  themes and nearly the background on some dark ones. The accent is deepened
+  (or lifted) to 3:1 for rings and marks and 4.5:1 as text.
+- The backdrop is the theme background at 80 to 92 % (dark) or 86 to 95 %
+  (light) from top to bottom, over a compositor blur (`hl.layer_rule` with
+  `blur = true`), dense enough that text holds over a bright page behind a
+  dark theme or a dark game behind a light one.
+- The node tests hold every theme Omarchy ships to these floors
+  (`tests/fixtures/omarchy-themes.json`).
 
 ## IPC
 

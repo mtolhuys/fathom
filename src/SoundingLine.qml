@@ -17,6 +17,7 @@ Item {
   id: gauge
 
   property var controller: null
+  required property var theme
   property real unit: 1
   property real textUnit: unit
   // The selection's depth, animated by FieldView as the camera moves.
@@ -55,7 +56,7 @@ Item {
   Text {
     x: gauge.lineX - width / 2
     y: gauge.lineTop - height - 4 * gauge.unit
-    color: Color.muted
+    color: gauge.theme.textFaint
     font.family: Style.font.family
     font.pixelSize: 14 * gauge.textUnit
     text: "≈"
@@ -67,7 +68,7 @@ Item {
     y: gauge.lineTop
     width: 1
     height: gauge.lineBottom - gauge.lineTop
-    color: Qt.alpha(Color.foreground, 0.18)
+    color: gauge.theme.line
   }
 
   Repeater {
@@ -85,14 +86,13 @@ Item {
         y: -height / 2
         width: (tick.index % 2 === 0 ? 9 : 5) * gauge.unit
         height: 1
-        color: Qt.alpha(Color.foreground, 0.28)
+        color: gauge.theme.tick
       }
 
       Text {
         anchors.verticalCenter: parent.verticalCenter
         x: gauge.lineX - 9 * gauge.unit - width
-        color: Color.muted
-        opacity: 0.85
+        color: gauge.theme.textFaint
         font.family: Style.font.family
         font.pixelSize: 10 * gauge.textUnit
         text: Field.depthMarkLabel(tick.index)
@@ -119,9 +119,9 @@ Item {
       height: width
       radius: width / 2
       visible: !modelData.hidden
-      color: selected ? Color.accent : (entry && entry.estimated ? "transparent" : Qt.alpha(Color.foreground, 0.6))
+      color: selected ? gauge.theme.accent : (entry && entry.estimated ? "transparent" : gauge.theme.mark)
       border.width: entry && entry.estimated && !selected ? 1 : 0
-      border.color: Qt.alpha(Color.foreground, 0.5)
+      border.color: gauge.theme.markBorder
 
       // More windows at this depth than the row can show.
       Text {
@@ -129,7 +129,7 @@ Item {
         anchors.leftMargin: 3 * gauge.unit
         anchors.verticalCenter: parent.verticalCenter
         visible: mark.modelData.more > 0
-        color: Color.muted
+        color: gauge.theme.textFaint
         font.family: Style.font.family
         font.pixelSize: 9 * gauge.textUnit
         text: "+" + mark.modelData.more
@@ -143,7 +143,7 @@ Item {
     y: gauge.lineTop
     width: 1.5
     height: Math.max(0, Layout.soundingY(gauge.leadDepth, gauge.lineTop, gauge.lineBottom) - gauge.lineTop)
-    color: Color.accent
+    color: gauge.theme.accent
     visible: gauge.controller !== null && gauge.controller.selectedIndex >= 0
   }
 
@@ -154,7 +154,7 @@ Item {
     height: width
     rotation: 45
     radius: 1.5
-    color: Color.accent
+    color: gauge.theme.accent
     visible: gauge.controller !== null && gauge.controller.selectedIndex >= 0
   }
 

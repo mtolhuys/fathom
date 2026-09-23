@@ -10,6 +10,7 @@ import qs.Commons // qmllint disable import
 import "Layout.js" as Layout
 import "Field.js" as Field
 import "Focus.js" as Focus
+import "Palette.js" as Palette
 
 Item {
   id: view
@@ -19,6 +20,11 @@ Item {
   readonly property int planeCount: planes.count
   readonly property alias map: map
   readonly property alias gauge: gauge
+  // Every color the field draws with, derived from the theme (light or dark)
+  // and derived again when the theme changes (Palette.js).
+  readonly property var theme: Palette.derive({
+    foreground: Color.foreground, background: Color.background, accent: Color.accent, urgent: Color.urgent
+  })
 
   // One unit is a pixel on a 1000 px tall screen; everything scales with it.
   readonly property real unit: Math.max(0.75, Math.min(1.6, height / 1000))
@@ -75,28 +81,28 @@ Item {
   Rectangle {
     anchors.fill: parent
     gradient: Gradient {
-      GradientStop { position: 0.0; color: Qt.alpha(Color.background, 0.66) }
-      GradientStop { position: 0.55; color: Qt.alpha(Color.background, 0.78) }
-      GradientStop { position: 1.0; color: Qt.alpha(Color.background, 0.9) }
+      GradientStop { position: 0.0; color: view.theme.veilTop }
+      GradientStop { position: 0.55; color: view.theme.veilMiddle }
+      GradientStop { position: 1.0; color: view.theme.veilBottom }
     }
   }
 
   // Light from the surface, fading as the selection goes deeper; the whole
-  // scene darkens with it. Diving into older windows feels like diving.
+  // scene dims with it. Diving into older windows feels like diving.
   Rectangle {
     anchors.left: parent.left
     anchors.right: parent.right
     height: parent.height * 0.45
     opacity: 1 - view.sceneDepth / 8
     gradient: Gradient {
-      GradientStop { position: 0.0; color: Qt.alpha(Color.foreground, 0.06) }
-      GradientStop { position: 1.0; color: Qt.alpha(Color.foreground, 0) }
+      GradientStop { position: 0.0; color: view.theme.surfaceLight }
+      GradientStop { position: 1.0; color: view.theme.surfaceLightEnd }
     }
   }
 
   Rectangle {
     anchors.fill: parent
-    color: Color.background
+    color: view.theme.depthShade
     opacity: view.sceneDepth * 0.035
     visible: opacity > 0.005
   }
@@ -151,6 +157,7 @@ Item {
 
       delegate: WindowPlane {
         controller: view.controller
+        theme: view.theme
         stage: view.stage
         unit: view.unit
         textUnit: view.textUnit
@@ -169,6 +176,7 @@ Item {
     height: view.stage.frontY + view.stage.frontHeight / 2 - view.deepTop
     visible: view.gaugeWidth > 0
     controller: view.controller
+    theme: view.theme
     unit: view.unit
     textUnit: view.textUnit
     leadDepth: view.sceneDepth
@@ -212,7 +220,7 @@ Item {
       Text {
         width: parent.width
         elide: Text.ElideRight
-        color: Color.foreground
+        color: view.theme.text
         font.family: Style.font.family
         font.pixelSize: 20 * view.textUnit
         font.bold: true
@@ -225,7 +233,7 @@ Item {
       Text {
         width: parent.width
         elide: Text.ElideRight
-        color: Color.muted
+        color: view.theme.textSoft
         font.family: Style.font.family
         font.pixelSize: 13 * view.textUnit
         text: {
@@ -251,7 +259,7 @@ Item {
 
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
-      color: Color.muted
+      color: view.theme.textSoft
       font.family: Style.font.family
       font.pixelSize: 13 * view.textUnit
       text: view.controller && view.controller.selectedSlot >= 0
@@ -267,7 +275,7 @@ Item {
 
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
-      color: Color.foreground
+      color: view.theme.text
       font.family: Style.font.family
       font.pixelSize: 20 * view.textUnit
       text: "No window matches “" + (view.controller ? view.controller.filterText : "") + "”"
@@ -275,7 +283,7 @@ Item {
 
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
-      color: Color.muted
+      color: view.theme.textSoft
       font.family: Style.font.family
       font.pixelSize: 13 * view.textUnit
       text: "Backspace to edit  ·  Esc to clear"
@@ -288,7 +296,7 @@ Item {
     x: view.margin
     y: view.margin + 8 * view.unit
     visible: !filterBar.visible && view.controller !== null
-    color: Color.muted
+    color: view.theme.textSoft
     font.family: Style.font.family
     font.pixelSize: 13 * view.textUnit
     text: {
@@ -311,9 +319,9 @@ Item {
     height: 34 * view.unit
     width: filterRow.implicitWidth + 28 * view.unit
     radius: height / 2
-    color: Qt.alpha(Color.background, 0.85)
+    color: view.theme.panel
     border.width: 1
-    border.color: view.filtering ? Qt.alpha(Color.accent, 0.7) : Qt.alpha(Color.foreground, 0.14)
+    border.color: view.filtering ? view.theme.accent : view.theme.panelBorder
     visible: view.filtering || (view.controller !== null && view.controller.mode === "browse")
 
     // Not empty space: a click here must not close the field.
@@ -331,7 +339,7 @@ Item {
 
       Text {
         anchors.verticalCenter: parent.verticalCenter
-        color: view.filtering ? Color.accent : Color.muted
+        color: view.filtering ? view.theme.accentText : view.theme.textFaint
         font.family: Style.font.family
         font.pixelSize: 14 * view.textUnit
         text: "/"
@@ -339,7 +347,7 @@ Item {
 
       Text {
         anchors.verticalCenter: parent.verticalCenter
-        color: view.filtering ? Color.foreground : Color.muted
+        color: view.filtering ? view.theme.text : view.theme.textFaint
         font.family: Style.font.family
         font.pixelSize: 14 * view.textUnit
         text: view.filtering ? view.controller.filterText : "type to filter"
@@ -350,13 +358,13 @@ Item {
         visible: view.filtering
         width: 2
         height: 16 * view.unit
-        color: Color.accent
+        color: view.theme.accent
       }
 
       Text {
         anchors.verticalCenter: parent.verticalCenter
         visible: view.filtering
-        color: Color.muted
+        color: view.theme.textSoft
         font.family: Style.font.family
         font.pixelSize: 12 * view.textUnit
         text: view.controller ? view.controller.order.length + " of " + view.controller.field.length : ""
@@ -373,7 +381,6 @@ Item {
     anchors.rightMargin: view.margin
     y: view.height - view.margin - view.mapHeight - 20 * view.unit
     spacing: 16 * view.unit
-    opacity: 0.8
 
     Repeater {
       model: view.holding
@@ -392,15 +399,15 @@ Item {
           width: Math.max(height, keyText.implicitWidth + 10 * view.unit)
           height: 18 * view.unit
           radius: 4 * view.unit
-          color: Qt.alpha(Color.foreground, 0.08)
+          color: view.theme.key
           border.width: 1
-          border.color: Qt.alpha(Color.foreground, 0.2)
+          border.color: view.theme.keyBorder
 
           Text {
             id: keyText
 
             anchors.centerIn: parent
-            color: Color.foreground
+            color: view.theme.textSoft
             font.family: Style.font.family
             font.pixelSize: 11 * view.textUnit
             text: hint.modelData[0]
@@ -409,7 +416,7 @@ Item {
 
         Text {
           anchors.verticalCenter: parent.verticalCenter
-          color: Color.muted
+          color: view.theme.textFaint
           font.family: Style.font.family
           font.pixelSize: 11 * view.textUnit
           text: hint.modelData[1]
@@ -438,6 +445,7 @@ Item {
     y: view.height - view.margin - height
     controller: view.controller
     view: view
+    theme: view.theme
     unit: view.unit
     textUnit: view.textUnit
   }

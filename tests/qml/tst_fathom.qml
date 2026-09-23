@@ -7,6 +7,7 @@ import QtQuick
 import QtTest
 import FathomTest
 import Quickshell.Hyprland
+import qs.Commons
 import "../src"
 import "../src/Depth.js" as Depth
 import "../src/Layout.js" as Layout
@@ -685,5 +686,48 @@ TestCase {
     Hyprland.toplevels = { values: [Hyprland.toplevels.values[0], Hyprland.toplevels.values[2]] }
     verify(!("b2" in fathom.snapshots))
     compare(Object.keys(fathom.snapshots).length, 2)
+  }
+
+  // The map shows the frame a card kept, at no capture of its own; a window
+  // never seen keeps its icon.
+  function test_map_tiles_show_the_last_frame_seen() {
+    setUpDesktop([toplevel("a1", 1, 0), toplevel("b2", 1, 1), toplevel("c3", 2, 2), toplevel("d4", 2, 3, { contentReady: false })])
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryVerify(function() { return Object.keys(fathom.snapshots).length === 3 }, 3000)
+    const seen = fathom.fieldView.map.tileFor(1)
+    tryVerify(function() { return seen.showsFrame }, 1000, "a seen window shows its last frame")
+    compare(seen.snapshot.url, fathom.snapshots["b2"].url, "the frame its card kept")
+    const unseen = fathom.fieldView.map.tileFor(3)
+    verify(unseen.snapshot === null)
+    verify(!unseen.showsFrame, "a window never seen shows its icon")
+  }
+
+  // Omarchy switches themes live: the open field re-colors, down to every
+  // card, the gauge and the map.
+  function test_the_field_follows_a_light_theme() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryVerify(function() { return fathom.revealed }, 1000)
+    const view = fathom.fieldView
+    verify(!view.theme.light, "the stub palette is dark")
+    try {
+      Color.foreground = "#575279"
+      Color.background = "#faf4ed"
+      Color.accent = "#56949f"
+      Color.urgent = "#b4637a"
+      verify(view.theme.light, "rose-pine is light")
+      compare(view.theme.text, "#575279")
+      verify(view.theme.textSoft !== "#cecacd", "its pale muted color is not text")
+      verify(view.planeAt(0).theme.light, "the cards follow")
+      verify(view.gauge.theme.light, "the gauge follows")
+      verify(view.map.theme.light, "the map follows")
+    } finally {
+      Color.foreground = "#ccd0cf"
+      Color.background = "#171717"
+      Color.accent = "#f25623"
+      Color.urgent = "#e0463a"
+    }
+    verify(!view.theme.light)
   }
 }

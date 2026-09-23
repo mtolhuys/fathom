@@ -272,7 +272,8 @@ Item {
   // monitor's area; a scrolling layout parks windows beside the screen, and
   // those never deliver a frame. So each card keeps the last frame it saw
   // while the field was open, here, in memory only (never on disk), and shows
-  // it, marked with its age, when a live frame does not come. Bounded to
+  // it, marked with its age, when a live frame does not come; the map shows
+  // the same images as thumbnails. Bounded to
   // snapshotLimit windows, oldest dropped first; a window's snapshot goes
   // when the window closes.
   readonly property int snapshotLimit: 24

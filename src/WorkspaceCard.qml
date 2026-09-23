@@ -1,11 +1,14 @@
 // One workspace on the map: its name, how many windows it holds, whether it
-// is on screen, and a minimap of its windows at their real positions (each
-// with its app icon). Hovering a window selects it; a click focuses it; a
-// click on the card focuses the workspace's most recent window.
+// is on screen, and a minimap of its windows at their real positions. Each
+// window shows the last frame the field saw of it (the snapshot its card
+// kept, so the map costs no capture of its own), else its app icon, and its
+// title where the tile has room. Hovering a window selects it; a click
+// focuses it; a click on the card focuses the workspace's most recent window.
 
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell.Widgets
 import qs.Commons // qmllint disable import
 import "Layout.js" as Layout
 import "Field.js" as Field
@@ -19,6 +22,7 @@ Item {
   // Set by WorkspaceMap.
   property var controller: null
   property var view: null
+  required property var theme
   property real unit: 1
   property real textUnit: unit
   property bool showMonitor: false
@@ -63,9 +67,9 @@ Item {
   Rectangle {
     anchors.fill: parent
     radius: 10 * card.unit
-    color: card.holdsSelection ? Qt.alpha(Color.accent, 0.08) : Qt.alpha(Color.foreground, 0.045)
+    color: card.holdsSelection ? card.theme.mapCardSelected : card.theme.mapCard
     border.width: card.holdsSelection ? 1.5 : 1
-    border.color: card.holdsSelection ? Qt.alpha(Color.accent, 0.7) : Qt.alpha(Color.foreground, 0.1)
+    border.color: card.holdsSelection ? card.theme.mapCardSelectedBorder : card.theme.mapCardBorder
 
     Behavior on border.color { ColorAnimation { duration: 140 } }
   }
@@ -94,7 +98,7 @@ Item {
 
       Text {
         anchors.verticalCenter: parent.verticalCenter
-        color: card.holdsSelection ? Color.accent : Color.foreground
+        color: card.holdsSelection ? card.theme.accentText : card.theme.text
         font.family: Style.font.family
         font.pixelSize: 14 * card.textUnit
         font.bold: true
@@ -104,7 +108,7 @@ Item {
 
       Text {
         anchors.verticalCenter: parent.verticalCenter
-        color: Color.muted
+        color: card.theme.textSoft
         font.family: Style.font.family
         font.pixelSize: 11 * card.textUnit
         text: {
@@ -124,7 +128,7 @@ Item {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         visible: card.showMonitor && card.group.monitor.length > 0
-        color: Color.muted
+        color: card.theme.textFaint
         font.family: Style.font.family
         font.pixelSize: 10 * card.textUnit
         text: card.group.monitor
@@ -136,13 +140,13 @@ Item {
         width: 6 * card.unit
         height: width
         radius: width / 2
-        color: Color.accent
+        color: card.theme.accent
       }
 
       Text {
         anchors.verticalCenter: parent.verticalCenter
         visible: card.group.onScreen && card.width > 190 * card.unit
-        color: Color.accent
+        color: card.theme.accentText
         font.family: Style.font.family
         font.pixelSize: 10 * card.textUnit
         text: "on screen"
@@ -168,15 +172,15 @@ Item {
       width: card.items.viewport ? card.items.viewport.width : 0
       height: card.items.viewport ? card.items.viewport.height : 0
       radius: 4 * card.unit
-      color: Qt.rgba(0, 0, 0, 0.22)
+      color: card.theme.screen
       border.width: 1
-      border.color: Qt.alpha(Color.foreground, card.group.onScreen ? 0.28 : 0.12)
+      border.color: card.group.onScreen ? card.theme.screenBorderOn : card.theme.screenBorder
     }
 
     Text {
       anchors.centerIn: parent
       visible: card.group.entries.length === 0
-      color: Color.muted
+      color: card.theme.textFaint
       font.family: Style.font.family
       font.pixelSize: 10 * card.textUnit
       text: "no windows"
@@ -202,6 +206,15 @@ Item {
         readonly property real inset: Math.min(1.5, rect.width / 6)
         // A scrolling layout parks windows beside the screen: shown, dimmer.
         readonly property bool parked: Layout.outside(card.windows[index], card.viewport)
+        readonly property var snapshot: card.controller && entry ? (card.controller.snapshots[entry.address] || null) : null
+        // A frame is worth showing from a thumbnail's size on; a title from
+        // a tile that can hold a line of it.
+        readonly property bool showsFrame: snapshot !== null && width >= 36 * card.unit && height >= 24 * card.unit
+        readonly property bool roomy: width >= 84 * card.unit && height >= 46 * card.unit
+        readonly property string title: {
+          const toplevel = entry ? entry.toplevel : null
+          return toplevel && toplevel.title ? String(toplevel.title) : (entry ? (entry.title || entry.appName) : "")
+        }
 
         x: rect.x + inset
         y: rect.y + inset
@@ -212,23 +225,94 @@ Item {
 
         Behavior on opacity { NumberAnimation { duration: 140 } }
 
+        ClippingRectangle {
+          anchors.fill: parent
+          radius: Math.min(4 * card.unit, width / 4)
+          color: tile.selected ? card.theme.tileSelected : (hover.containsMouse ? card.theme.tileHover : card.theme.tile)
+
+          // The same image (and texture) the card holds: no copy, no capture.
+          Image {
+            anchors.fill: parent
+            visible: tile.showsFrame
+            source: tile.showsFrame ? tile.snapshot.url : ""
+            fillMode: Image.PreserveAspectCrop
+            smooth: true
+            mipmap: true
+            opacity: tile.selected || hover.containsMouse ? 1 : 0.78
+          }
+        }
+
+        // Icon alone: centered, and above the title when there is room.
+        AppIcon {
+          anchors.centerIn: parent
+          anchors.verticalCenterOffset: tile.roomy ? -7 * card.textUnit : 0
+          size: Math.min(26 * card.unit, Math.min(tile.width, tile.height) * (tile.roomy ? 0.42 : 0.64))
+          visible: !tile.showsFrame && size >= 7
+          source: tile.entry ? tile.entry.icon : ""
+          name: tile.entry ? tile.entry.appName : ""
+        }
+
+        Text {
+          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.bottom: parent.bottom
+          anchors.bottomMargin: 4 * card.unit
+          width: parent.width - 8 * card.unit
+          visible: tile.roomy && !tile.showsFrame
+          horizontalAlignment: Text.AlignHCenter
+          elide: Text.ElideRight
+          color: tile.selected ? card.theme.text : card.theme.textSoft
+          font.family: Style.font.family
+          font.pixelSize: 10 * card.textUnit
+          text: tile.title
+        }
+
+        // Over a frame: the icon, and the title where there is room, in a
+        // strip along the bottom.
+        Rectangle {
+          id: strip
+
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          anchors.margins: 1
+          height: Math.round(16 * card.textUnit)
+          radius: Math.min(3 * card.unit, height / 2)
+          visible: tile.showsFrame
+          color: tile.roomy ? card.theme.panel : "transparent"
+
+          AppIcon {
+            id: stripIcon
+
+            x: 3 * card.unit
+            anchors.verticalCenter: parent.verticalCenter
+            size: 11 * card.textUnit
+            source: tile.entry ? tile.entry.icon : ""
+            name: tile.entry ? tile.entry.appName : ""
+          }
+
+          Text {
+            anchors.left: stripIcon.right
+            anchors.leftMargin: 4 * card.unit
+            anchors.right: parent.right
+            anchors.rightMargin: 4 * card.unit
+            anchors.verticalCenter: parent.verticalCenter
+            visible: tile.roomy
+            elide: Text.ElideRight
+            color: card.theme.text
+            font.family: Style.font.family
+            font.pixelSize: 10 * card.textUnit
+            text: tile.title
+          }
+        }
+
         Rectangle {
           anchors.fill: parent
           radius: Math.min(4 * card.unit, width / 4)
-          color: tile.selected ? Qt.alpha(Color.accent, 0.36)
-            : (hover.containsMouse ? Qt.alpha(Color.foreground, 0.2) : Qt.tint(Qt.rgba(0.12, 0.12, 0.12, 0.9), Qt.alpha(Color.foreground, 0.08)))
+          color: "transparent"
           border.width: tile.selected ? Math.max(1.5, 2 * card.unit) : 1
-          border.color: tile.selected ? Color.accent
-            : (tile.urgent ? Color.urgent
-              : (tile.entry && tile.entry.active ? Qt.alpha(Color.foreground, 0.75) : Qt.alpha(Color.foreground, 0.24)))
-        }
-
-        AppIcon {
-          anchors.centerIn: parent
-          size: Math.min(26 * card.unit, Math.min(tile.width, tile.height) * 0.64)
-          visible: size >= 7
-          source: tile.entry ? tile.entry.icon : ""
-          name: tile.entry ? tile.entry.appName : ""
+          border.color: tile.selected ? card.theme.accent
+            : (tile.urgent ? card.theme.urgent
+              : (tile.entry && tile.entry.active ? card.theme.tileBorderActive : card.theme.tileBorder))
         }
 
         MouseArea {

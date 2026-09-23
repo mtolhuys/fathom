@@ -1,8 +1,9 @@
 // One window in the Deep: a card of the monitor's shape, placed by its slot
 // relative to the camera (Layout.deepPlane), with a header strip (icon,
 // title, age) and the live capture fitted inside. Fog by how long ago the
-// window was used (Depth.fogForDepth) darkens the capture, not the header,
-// so every card stays readable however deep it sits.
+// window was used (Depth.fogForDepth) fades the capture into the backdrop,
+// not the header, so every card stays readable however deep it sits. Colors
+// come from the theme through FieldView (Palette.js).
 
 import QtQuick
 import QtQuick.Effects
@@ -21,6 +22,7 @@ Item {
 
   // Set by FieldView.
   property var controller: null
+  required property var theme
   property var stage: null
   property real unit: 1
   property real textUnit: unit
@@ -57,7 +59,7 @@ Item {
   readonly property real pad: Math.max(3, 8 * unit * depthScale)
   readonly property real radius: Math.max(4, 11 * unit * depthScale)
   readonly property real fog: entry
-    ? Math.min(0.7, Math.max(0, Math.min(1, r)) * (0.12 + Depth.fogForDepth(entry.depth) * 0.75) + 0.05 * Math.max(0, r - 1))
+    ? theme.fogStrength * Math.min(0.7, Math.max(0, Math.min(1, r)) * (0.12 + Depth.fogForDepth(entry.depth) * 0.75) + 0.05 * Math.max(0, r - 1))
     : 0
   readonly property string titleText: toplevel && toplevel.title ? String(toplevel.title) : (entry ? entry.title : "")
   // Outside its monitor's area (a scrolling layout parked it beside the
@@ -69,10 +71,12 @@ Item {
   readonly property bool showsSnapshot: !capture.hasContent && snapshot !== null
 
   // Keeps the frame a moment after it arrives (the first one can be partial).
-  // The grab is of what the card draws (the clipped frame), which is always
-  // a visible item; the fog and the badge sit outside it.
+  // The grab is of what the card draws (the clipped frame); the fog and the
+  // badge sit outside it. A grab renders the frame's own items whatever the
+  // card's opacity, so the window you were on, captured one step behind the
+  // camera where its card has faded out, keeps a frame too: the map shows it.
   function takeSnapshot() {
-    if (!capture.hasContent || !controller || !controller.opened || !entry || !visible) return
+    if (!capture.hasContent || !controller || !controller.opened || !entry || !capturing) return
     if (!controller.wantsSnapshot(entry.address)) return
     const width = Math.max(1, Math.min(controller.snapshotWidth, capture.sourceSize.width))
     const height = Math.max(1, Math.round(width * frame.height / Math.max(1, frame.width)))
@@ -113,18 +117,19 @@ Item {
     blur: (card.selected ? 40 : 26) * card.unit
     spread: card.selected ? 3 * card.unit : 0
     offset: card.selected ? Qt.vector2d(0, 0) : Qt.vector2d(0, 8 * card.unit * card.depthScale)
-    color: card.selected ? Qt.alpha(Color.accent, 0.38) : Qt.rgba(0, 0, 0, 0.55)
+    color: card.selected ? card.theme.glow : card.theme.shadow
   }
 
-  // Glass: a little lighter at the top, like light from the surface.
+  // Glass on a dark theme, paper on a light one: a little lighter at the
+  // top, like light from the surface.
   Rectangle {
     anchors.fill: parent
     radius: card.radius
     border.width: 1
-    border.color: Qt.alpha(Color.foreground, card.hovered ? 0.3 : 0.11)
+    border.color: card.hovered ? card.theme.cardBorderHover : card.theme.cardBorder
     gradient: Gradient {
-      GradientStop { position: 0; color: Qt.tint(Color.background, Qt.alpha(Color.foreground, card.selected ? 0.12 : 0.085)) }
-      GradientStop { position: 1; color: Qt.tint(Color.background, Qt.alpha(Color.foreground, card.selected ? 0.06 : 0.035)) }
+      GradientStop { position: 0; color: card.selected ? card.theme.cardSelectedTop : card.theme.cardTop }
+      GradientStop { position: 1; color: card.selected ? card.theme.cardSelectedBottom : card.theme.cardBottom }
     }
   }
 
@@ -153,7 +158,7 @@ Item {
       anchors.rightMargin: 8 * card.unit
       anchors.verticalCenter: parent.verticalCenter
       elide: Text.ElideRight
-      color: Color.foreground
+      color: card.theme.text
       font.family: Style.font.family
       font.pixelSize: Math.max(10, Math.min(13 * card.textUnit, card.headerHeight * 0.46))
       font.bold: card.selected
@@ -165,7 +170,7 @@ Item {
 
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
-      color: Color.muted
+      color: card.theme.textSoft
       font.family: Style.font.family
       font.pixelSize: Math.max(9, Math.min(11 * card.textUnit, card.headerHeight * 0.4))
       text: card.entry ? Field.ageShort(card.entry.seconds, card.entry.active, card.entry.estimated) : ""
@@ -190,7 +195,7 @@ Item {
       width: preview.fitted.width
       height: preview.fitted.height
       radius: Math.max(2, card.radius * 0.55)
-      color: Qt.tint(Color.background, Qt.alpha(Color.foreground, 0.04))
+      color: card.theme.bed
 
       // Until a frame arrives, and for windows Hyprland does not render (a
       // scrolling layout parks them beside the screen), the last frame seen,
@@ -223,7 +228,7 @@ Item {
           horizontalAlignment: Text.AlignHCenter
           elide: Text.ElideRight
           visible: frame.height > 110 * card.unit
-          color: Color.muted
+          color: card.theme.textSoft
           font.family: Style.font.family
           font.pixelSize: Math.max(10, Math.min(13 * card.textUnit, frame.height * 0.05))
           text: card.entry ? card.entry.appName : ""
@@ -234,8 +239,7 @@ Item {
           horizontalAlignment: Text.AlignHCenter
           elide: Text.ElideRight
           visible: card.parked && frame.height > 130 * card.unit
-          color: Color.muted
-          opacity: 0.75
+          color: card.theme.textFaint
           font.family: Style.font.family
           font.pixelSize: Math.max(9, Math.min(11 * card.textUnit, frame.height * 0.042))
           text: "off screen \u00b7 no live preview"
@@ -256,9 +260,17 @@ Item {
     Rectangle {
       anchors.fill: frame
       radius: frame.radius
-      color: Color.background
+      color: card.theme.fog
       opacity: card.fog
       visible: opacity > 0.005
+    }
+
+    Rectangle {
+      anchors.fill: frame
+      radius: frame.radius
+      color: "transparent"
+      border.width: 1
+      border.color: card.theme.frameEdge
     }
 
     // A still frame says so, and how old it is.
@@ -270,15 +282,15 @@ Item {
       width: badgeText.implicitWidth + 14 * card.unit
       height: badgeText.implicitHeight + 6 * card.unit
       radius: height / 2
-      color: Qt.alpha(Color.background, 0.82)
+      color: card.theme.panel
       border.width: 1
-      border.color: Qt.alpha(Color.foreground, 0.16)
+      border.color: card.theme.panelBorder
 
       Text {
         id: badgeText
 
         anchors.centerIn: parent
-        color: Color.muted
+        color: card.theme.textSoft
         font.family: Style.font.family
         font.pixelSize: Math.max(9, 11 * card.textUnit * Math.max(0.8, card.depthScale))
         text: {
@@ -298,7 +310,7 @@ Item {
     color: "transparent"
     visible: card.selected || card.urgent
     border.width: card.selected ? Math.max(2, 2.5 * card.unit) : 1.5
-    border.color: card.selected ? Color.accent : Color.urgent
+    border.color: card.selected ? card.theme.accent : card.theme.urgent
   }
 
   // Wants attention (Hyprland's urgent flag).
@@ -310,9 +322,9 @@ Item {
     width: 12 * card.unit
     height: width
     radius: width / 2
-    color: Color.urgent
+    color: card.theme.urgent
     border.width: 2
-    border.color: Color.background
+    border.color: card.theme.background
   }
 
   // A MouseArea (not a TapHandler) so the click stops here and never reaches

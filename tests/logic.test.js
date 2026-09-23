@@ -2,7 +2,8 @@
 
 // Unit tests for the pure logic behind Fathom: depth and fog, focus recency,
 // the field (filter, navigation, workspaces, wheel, labels), the geometry of
-// the Deep and the map, focus dispatch strings and frame statistics.
+// the Deep and the map, focus dispatch strings, frame statistics and the
+// colors derived from every Omarchy theme.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -16,6 +17,9 @@ const Focus = load(src('Focus.js'));
 const Stats = load(src('Stats.js'));
 const Field = load(src('Field.js'));
 const Layout = load(src('Layout.js'));
+const Palette = load(src('Palette.js'));
+// Every theme Omarchy ships, as the shell reads colors.toml.
+const themes = require('./fixtures/omarchy-themes.json');
 
 const close = (actual, expected, epsilon = 1e-9) =>
   assert.ok(Math.abs(actual - expected) <= epsilon, `${actual} is not within ${epsilon} of ${expected}`);
@@ -524,4 +528,95 @@ test('map cards follow their aspect and shrink together when the row is full', (
   // Sixteen workspaces never run past the edge, whatever the minimum width.
   const crowded = Layout.mapCards(new Array(16).fill(1.6), 1300, 100, 10, 16, 90);
   assert.ok(crowded.widths.reduce((a, b) => a + b, 0) + 150 <= 1300 + 1e-6);
+});
+
+test('theme colors parse from the forms a QML color converts to', () => {
+  assert.deepEqual({ ...Palette.parse('#ffffff') }, { r: 1, g: 1, b: 1, a: 1 });
+  assert.deepEqual({ ...Palette.parse('#FFF') }, { r: 1, g: 1, b: 1, a: 1 });
+  const translucent = Palette.parse('#80000000');
+  close(translucent.a, 128 / 255);
+  assert.equal(translucent.r, 0);
+  assert.equal(Palette.parse('ffffff'), null);
+  assert.equal(Palette.parse('#12345'), null);
+  assert.equal(Palette.parse(null), null);
+  assert.equal(Palette.hex(Palette.parse('#56949f')), '#56949f');
+  assert.equal(Palette.hex(Palette.parse('#56949f'), 0.5), '#8056949f');
+  assert.equal(Palette.hex(Palette.parse('#56949f'), 0), '#0056949f');
+  close(Palette.contrast(Palette.parse('#000000'), Palette.parse('#ffffff')), 21);
+  close(Palette.contrast(Palette.parse('#777777'), Palette.parse('#777777')), 1);
+});
+
+test('a theme is light when its background is lighter than its text', () => {
+  for (const [name, theme] of Object.entries(themes))
+    assert.equal(Palette.derive(theme).light, theme.mode === 'light', name);
+  assert.equal(Palette.derive(null).light, false, 'no theme falls back to dark');
+  assert.equal(Palette.derive({ foreground: 'nonsense' }).text, '#cacccc');
+});
+
+test('every derived color is one QML takes as it is', () => {
+  for (const [name, theme] of Object.entries(themes)) {
+    for (const [key, value] of Object.entries(Palette.derive(theme))) {
+      if (typeof value !== 'string') continue;
+      assert.match(value, /^#([0-9a-f]{6}|[0-9a-f]{8})$/, `${name}.${key}`);
+    }
+  }
+});
+
+// Where text meets its backdrop. The veil lets the blurred desktop through,
+// so text is also held against the veil's thinnest part (the top) over a
+// mid-grey desktop, what a blurred page of mixed content comes to.
+test('text reads in every Omarchy theme, over a busy desktop too', () => {
+  const grey = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+  for (const [name, theme] of Object.entries(themes)) {
+    const palette = Palette.derive(theme);
+    const color = (key) => Palette.parse(palette[key]);
+    const ratio = (key, against) => Palette.contrast(color(key), against);
+    const bg = color('background');
+    const veil = Palette.mix(grey, bg, color('veilTop').a);
+
+    assert.ok(ratio('textSoft', bg) >= 5.5, `${name}: secondary text ${ratio('textSoft', bg)}`);
+    assert.ok(ratio('textFaint', bg) >= 4.5, `${name}: tertiary text ${ratio('textFaint', bg)}`);
+    assert.ok(ratio('text', bg) >= ratio('textSoft', bg) && ratio('textSoft', bg) >= ratio('textFaint', bg),
+      `${name}: the tiers step down from the text`);
+    assert.ok(ratio('text', veil) >= 4.5, `${name}: text over a busy desktop ${ratio('text', veil)}`);
+    assert.ok(ratio('textSoft', veil) >= 4, `${name}: secondary text over a busy desktop ${ratio('textSoft', veil)}`);
+    assert.ok(ratio('textFaint', veil) >= 3, `${name}: tertiary text over a busy desktop ${ratio('textFaint', veil)}`);
+
+    for (const card of ['cardTop', 'cardBottom', 'cardSelectedTop', 'cardSelectedBottom']) {
+      assert.ok(ratio('text', color(card)) >= 4.5, `${name}: a card title on ${card}`);
+      assert.ok(ratio('textSoft', color(card)) >= 4.5, `${name}: a card's age on ${card}`);
+    }
+    assert.ok(ratio('accentText', bg) >= 4.5, `${name}: accent text ${ratio('accentText', bg)}`);
+    assert.ok(ratio('accent', bg) >= 3, `${name}: the selection ring ${ratio('accent', bg)}`);
+    assert.ok(ratio('urgent', bg) >= 3, `${name}: the urgent mark ${ratio('urgent', bg)}`);
+  }
+});
+
+test('the scene is lit for its theme: paper on a light one, glass on a dark one', () => {
+  const lum = (value) => Palette.luminance(Palette.parse(value));
+  for (const [name, theme] of Object.entries(themes)) {
+    const palette = Palette.derive(theme);
+    assert.ok(lum(palette.cardTop) >= lum(palette.background), `${name}: cards stand above the veil`);
+    assert.ok(lum(palette.cardTop) >= lum(palette.cardBottom), `${name}: lit from above`);
+    assert.ok(lum(palette.cardSelectedTop) >= lum(palette.cardTop), `${name}: the selection is the brightest card`);
+    assert.notEqual(palette.tileSelected, palette.tile, `${name}: the selected tile stands out`);
+    if (palette.light) {
+      assert.ok(lum(palette.depthShade) < lum(palette.background), `${name}: the scene dims as you dive`);
+      assert.ok(lum(palette.tile) >= lum(palette.background), `${name}: map tiles are paper, not dark blocks`);
+      assert.ok(palette.fogStrength < 1, `${name}: fog is a haze, not milk`);
+    } else {
+      assert.equal(palette.depthShade, palette.background, `${name}: the scene darkens as you dive`);
+      assert.equal(palette.fogStrength, 1);
+    }
+  }
+});
+
+test("a theme's pale muted color never becomes text", () => {
+  // rose-pine's muted (#cecacd) on its background reads at 1.5:1.
+  const palette = Palette.derive(themes['rose-pine']);
+  assert.notEqual(palette.textSoft, '#cecacd');
+  assert.notEqual(palette.textFaint, '#cecacd');
+  // Its accent is deepened until it reads as text.
+  assert.notEqual(palette.accentText, '#56949f');
+  assert.equal(Palette.derive(themes['flexoki-light']).accentText, '#205ea6', 'an accent that reads stays as it is');
 });

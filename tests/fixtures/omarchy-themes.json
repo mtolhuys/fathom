@@ -1,0 +1,156 @@
+{
+  "catppuccin": {
+    "mode": "dark",
+    "foreground": "#cdd6f4",
+    "background": "#1e1e2e",
+    "accent": "#89b4fa",
+    "urgent": "#f38ba8"
+  },
+  "catppuccin-latte": {
+    "mode": "light",
+    "foreground": "#4c4f69",
+    "background": "#eff1f5",
+    "accent": "#1e66f5",
+    "urgent": "#d20f39"
+  },
+  "ethereal": {
+    "mode": "dark",
+    "foreground": "#ffcead",
+    "background": "#060b1e",
+    "accent": "#7d82d9",
+    "urgent": "#ed5b5a"
+  },
+  "everforest": {
+    "mode": "dark",
+    "foreground": "#d3c6aa",
+    "background": "#2d353b",
+    "accent": "#7fbbb3",
+    "urgent": "#e67e80"
+  },
+  "flexoki-light": {
+    "mode": "light",
+    "foreground": "#100f0f",
+    "background": "#fffcf0",
+    "accent": "#205ea6",
+    "urgent": "#d14d41"
+  },
+  "gruvbox": {
+    "mode": "dark",
+    "foreground": "#d4be98",
+    "background": "#282828",
+    "accent": "#7daea3",
+    "urgent": "#ea6962"
+  },
+  "hackerman": {
+    "mode": "dark",
+    "foreground": "#ddf7ff",
+    "background": "#0b0c16",
+    "accent": "#82fb9c",
+    "urgent": "#50f872"
+  },
+  "kanagawa": {
+    "mode": "dark",
+    "foreground": "#dcd7ba",
+    "background": "#1f1f28",
+    "accent": "#dcd7ba",
+    "urgent": "#c34043"
+  },
+  "last-horizon": {
+    "mode": "dark",
+    "foreground": "#fafcfb",
+    "background": "#0c0b0c",
+    "accent": "#b59790",
+    "urgent": "#c38b7b"
+  },
+  "lumon": {
+    "mode": "dark",
+    "foreground": "#d6e2ee",
+    "background": "#16242d",
+    "accent": "#8bc9eb",
+    "urgent": "#4d86b0"
+  },
+  "lupine": {
+    "mode": "light",
+    "foreground": "#212121",
+    "background": "#fafafa",
+    "accent": "#3264eb",
+    "urgent": "#c900c4"
+  },
+  "matte-black": {
+    "mode": "dark",
+    "foreground": "#bebebe",
+    "background": "#121212",
+    "accent": "#e68e0d",
+    "urgent": "#d35f5f"
+  },
+  "miasma": {
+    "mode": "dark",
+    "foreground": "#c2c2b0",
+    "background": "#222222",
+    "accent": "#78824b",
+    "urgent": "#685742"
+  },
+  "nord": {
+    "mode": "dark",
+    "foreground": "#d8dee9",
+    "background": "#2e3440",
+    "accent": "#81a1c1",
+    "urgent": "#bf616a"
+  },
+  "osaka-jade": {
+    "mode": "dark",
+    "foreground": "#c1c497",
+    "background": "#111c18",
+    "accent": "#509475",
+    "urgent": "#ff5345"
+  },
+  "retro-82": {
+    "mode": "dark",
+    "foreground": "#f6dcac",
+    "background": "#05182e",
+    "accent": "#faa968",
+    "urgent": "#f85525"
+  },
+  "ristretto": {
+    "mode": "dark",
+    "foreground": "#e6d9db",
+    "background": "#2c2525",
+    "accent": "#f38d70",
+    "urgent": "#fd6883"
+  },
+  "rose-pine": {
+    "mode": "light",
+    "foreground": "#575279",
+    "background": "#faf4ed",
+    "accent": "#56949f",
+    "urgent": "#b4637a"
+  },
+  "solitude": {
+    "mode": "dark",
+    "foreground": "#cacccc",
+    "background": "#101315",
+    "accent": "#798186",
+    "urgent": "#565d60"
+  },
+  "tokyo-night": {
+    "mode": "dark",
+    "foreground": "#a9b1d6",
+    "background": "#1a1b26",
+    "accent": "#7aa2f7",
+    "urgent": "#f7768e"
+  },
+  "vantablack": {
+    "mode": "dark",
+    "foreground": "#ffffff",
+    "background": "#000000",
+    "accent": "#8d8d8d",
+    "urgent": "#a4a4a4"
+  },
+  "white": {
+    "mode": "light",
+    "foreground": "#000000",
+    "background": "#ffffff",
+    "accent": "#6e6e6e",
+    "urgent": "#2a2a2a"
+  }
+}

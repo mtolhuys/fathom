@@ -19,7 +19,8 @@ open (see the open question in [SPEC.md](SPEC.md)).
 | The map and its workspace cards with minimaps | `src/WorkspaceMap.qml`, `src/WorkspaceCard.qml` |
 | The sounding line (depth gauge in fathoms) | `src/SoundingLine.qml` |
 | Last-seen snapshots, in memory | `src/Fathom.qml`, `src/WindowPlane.qml` |
-| App icons with a lettered fallback | `src/AppIcon.qml` |
+| App icons with a lettered fallback, loaded only while shown | `src/AppIcon.qml` |
+| Every color, from the theme, light or dark | `src/Palette.js` |
 | Bindings: the `fathom` submap, the Alt release hook, load once, blur | `hypr/fathom.lua` |
 | The one way to load them into a running Hyprland, with checks before and after | `bin/load-bindings` |
 | Offscreen renders for design review | `tests/qml/render.sh`, `tests/qml/render/tst_render.qml` |
@@ -33,7 +34,10 @@ open (see the open question in [SPEC.md](SPEC.md)).
   has the numbers.
 - **A map of every workspace.** One card per workspace with a minimap of its
   windows at their real positions, including the windows a scrolling layout
-  parks beside the screen, and the scratchpads.
+  parks beside the screen, and the scratchpads. Each shows the last frame the
+  field saw of it, reused from its card, and its title where there is room.
+- **Any theme.** Light themes get paper cards over a pale veil; every text
+  tier holds its contrast in all 22 Omarchy themes.
 - **Keys that make sense while Alt is held.** Up and Down (and the wheel) dive,
   Left and Right move between workspaces, digits jump to one, letters filter,
   Space keeps the field open. A Hyprland submap keeps the user's own Alt
