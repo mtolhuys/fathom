@@ -3,6 +3,11 @@
 Fathom is a depth-based Alt-Tab overlay plugin for Omarchy Quattro. Read
 `docs/SPEC.md` before changing behavior and `docs/PHASE0.md` for status.
 
+> [!CAUTION]
+> Hyprland 0.56.2 crashed when Fathom's Lua snippet was loaded a second time
+> in one compositor session. Before live binding work, read
+> [`docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md`](docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md).
+
 ## Invariants
 
 - v1 is an overlay only. Never move, resize or close a real window. The focus
