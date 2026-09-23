@@ -20,7 +20,8 @@ open (see the open question in [SPEC.md](SPEC.md)).
 | The sounding line (depth gauge in fathoms) | `src/SoundingLine.qml` |
 | Last-seen snapshots, in memory | `src/Fathom.qml`, `src/WindowPlane.qml` |
 | App icons with a lettered fallback | `src/AppIcon.qml` |
-| Bindings: the `fathom` submap, the Alt release hook, reload, blur | `hypr/fathom.lua` |
+| Bindings: the `fathom` submap, the Alt release hook, load once, blur | `hypr/fathom.lua` |
+| The one way to load them into a running Hyprland, with checks before and after | `bin/load-bindings` |
 | Offscreen renders for design review | `tests/qml/render.sh`, `tests/qml/render/tst_render.qml` |
 
 ## Design, in short
@@ -118,6 +119,15 @@ on 2026-09-23 (Omarchy 4.0.4, Hyprland 0.56.2, Quickshell 0.3.1).
   The mocked `hl` of the Lua tests could not show it. Since `8f67bae`, a second
   load in one Lua state does nothing and changes need `hyprctl reload`.
   Which of the three calls crashes is not known without Hyprland's symbols.
+
+- After the crash (`44b459e`), on a fresh Hyprland session: the persistent
+  block in `~/.config/hypr/bindings.lua` (altswitch as the fallback) loaded
+  the snippet on Hyprland's own config reload, and `bash bin/dev-sync`
+  installed HEAD and ran `bin/load-bindings --fresh`, which reloaded the
+  config once. Hyprland kept PID 2530 through both, `hyprctl configerrors`
+  stayed empty, Alt+Tab and Alt+Shift+Tab are Fathom's in the default and the
+  `fathom` submap, altswitch's other Alt chords are gone, and the installed
+  tree is HEAD.
 
 ## Not yet verified
 

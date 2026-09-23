@@ -122,3 +122,9 @@ So that no change, person or agent can bring this back:
   the contract, and moves experiments with Hyprland's Lua API to the omakit
   lab.
 
+Verified on the device after these guardrails (HEAD `44b459e`): the persistent
+block in `bindings.lua` loaded the snippet on Hyprland's config reload, and
+`bash bin/dev-sync` followed by `bin/load-bindings --fresh` reloaded it once
+more; Hyprland kept PID 2530, `configerrors` stayed empty, and Alt+Tab is
+Fathom's.
+

@@ -29,6 +29,11 @@ Phase 1: the product.
   layout) show the last frame Fathom saw of them, kept in memory only, or say
   they are off screen.
 - `tests/qml/render.sh` renders the field offscreen for design review.
+- Never crash the compositor: the snippet loads once per Lua state and keeps
+  no Hyprland object; `bin/load-bindings` is the one way to load it into a
+  running Hyprland (checks before and after, stops if Hyprland's PID
+  changed), and `bin/dev-sync` uses it so a changed snippet always takes
+  effect. See docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md.
 
 ## 0.1.0 (unreleased)
 
