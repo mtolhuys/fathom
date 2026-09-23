@@ -28,9 +28,12 @@ Fathom runs inside Maarten's working session. These hold without exception:
   disposable Omarchy guest with the same Hyprland.
 - On any unexpected compositor exit: stop, inspect the core, write it down.
   Never repeat the triggering command to see if it happens again.
-- Live checks on the desktop are limited to Fathom's own IPC (`state`,
-  `captures`, `open`/`cancel`, `bench`), with Maarten's go, and with the
-  Hyprland PID compared before and after.
+- Agents never test on or deploy to Maarten's desktop: it runs his session,
+  his apps and his games. Every live test (keys, captures, the bench, the
+  bindings, `omakit weigh`) runs in the omakit lab, a disposable Omarchy guest.
+  Deploying a lab-proven build is Maarten's own `bash bin/dev-sync`. On the
+  desktop an agent only reads (`bin/load-bindings --check`, `omarchy-shell
+  fathom state`, read-only `hyprctl`); the local agent hook enforces it.
 
 ## Invariants
 
@@ -102,14 +105,13 @@ The skills (`omarchy-plugin-build`, `-check`, `-weigh`, `-submit`,
   `omakit submit . --category <c> --tags <a,b> --json --offline`. Category and
   tags are Maarten's editorial choice; ask, never invent them. Fix the cause a
   remedy names; never work around a check.
-- **Prove.** `omakit lab prove` runs omakit's own suites, not a plugin's
-  scenarios, so it does not cover Fathom yet. Frame times need the real
-  integrated GPU anyway; installing on the desktop (`bin/dev-sync`) is the
-  deliberate exception to omakit's lab-first rule and happens only with
-  Maarten's go.
+- **Prove.** Every live test runs in the omakit lab, never on the desktop.
+  `omakit lab prove` runs omakit's own suites only, so Fathom's scenarios run
+  in the same disposable guest through omakit's lab code. Frame times in the
+  guest are not the integrated GPU's; they are still compared run to run.
 - **Weigh.** `omakit weigh io.github.mtolhuys.fathom` before any submission
-  and after any change that adds a timer or a subscription. It restarts the
-  shell, so ask Maarten first; never pass `--yes` on his behalf.
+  and after any change that adds a timer or a subscription, in the lab guest
+  (it restarts the shell it measures). Never on the desktop.
 - **Submit and track.** `omakit submit` without `--offline` produces the issue
   text; Maarten posts it. Never open issues, comment or push on his behalf.
 
