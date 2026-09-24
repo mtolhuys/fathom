@@ -631,6 +631,7 @@ Item {
       revealed: root.revealed,
       mode: root.mode,
       pinned: root.pinned,
+      watchdog: watchdog.running,
       windows: root.field.length,
       shown: root.order.length,
       workspaces: root.groups.length,
