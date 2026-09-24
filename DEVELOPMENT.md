@@ -141,7 +141,32 @@ The skills (`omarchy-plugin-build`, `-check`, `-weigh`, `-submit`,
   and after any change that adds a timer or a subscription, in the lab guest
   (it restarts the shell it measures). Never on the desktop.
 - **Submit and track.** `omakit submit` without `--offline` produces the issue
-  text; Maarten posts it. Never open issues, comment or push on his behalf.
+  text; Maarten posts it, or says in so many words that an agent may. Never
+  open issues, comment or push on his behalf otherwise.
+- **Main is frozen while a submission is open.** The marketplace validates one
+  commit, the default branch's HEAD when the issue is opened or edited, and
+  reviewers approve only that commit. A push to main after it leaves the
+  submission "not approvable at its present commit"
+  (omacom/omarchy-plugin-marketplace#8426, 2026-09-24: a README fix pushed
+  after validation, which an agent took for harmless). So:
+  - Finish everything, the README and the images included, before `omakit
+    submit`; push, then submit.
+  - While the submission is open, work lands on other branches or stays
+    local. `bin/submission-guard`, installed as the pre-push hook
+    (`ln -sf ../../bin/submission-guard .git/hooks/pre-push`), refuses a push
+    to main while a submission for this repository is open, and when GitHub
+    cannot be asked.
+  - A fix the review asks for goes out with `FATHOM_PUSH_DURING_REVIEW=1 git
+    push`, and `bash bin/revalidate` follows at once. It runs omakit's retry
+    edit protocol: omakit renders the body again, and nothing but the
+    maintainer notes may change. It shows the difference, and with `--edit`
+    (Maarten's go) edits the issue and watches until the marketplace has
+    validated the new commit.
+  - `omakit watch <issue> .` saying STALE is never "harmless": it means the
+    reviewers cannot approve.
+  - Once the plugin is listed, a newer commit goes through the marketplace's
+    verification form ("Verify and publish a newer upstream commit"), not
+    through the submission.
 
 ## Phases
 

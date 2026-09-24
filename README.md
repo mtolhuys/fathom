@@ -218,6 +218,7 @@ bash tests/qml/render.sh   # render the field offscreen into screenshots-local/
 bash bin/make-art          # the preview, the banner and the demo, from the QML
 bash bin/dev-sync          # install the working tree, stamped with its identity
 bash bin/dev-status        # is the running Fathom the working tree? (read-only)
+bash bin/revalidate        # point an open marketplace submission at the current main
 bash bin/load-bindings     # the only way to write to the running Hyprland (--check, --fresh)
 ```
 

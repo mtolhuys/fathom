@@ -1,0 +1,94 @@
+#!/bin/bash
+# Revalidates the open marketplace submission at the current main, by omakit's
+# retry edit protocol (the omarchy-plugin-submit skill). `omakit submit`
+# renders the body again from the issue's own category, tags and maintainer
+# notes, plus one line naming the commit. Everything but the maintainer notes
+# must come out the same. The issue is edited only with --edit (the owner's
+# go), then `omakit watch` runs until the marketplace has validated this
+# commit.
+#
+#   bash bin/revalidate          show what the edit would change
+#   bash bin/revalidate --edit   edit the issue, then watch
+
+set -euo pipefail
+
+readonly marketplace="omacom/omarchy-plugin-marketplace"
+project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+readonly project_root
+
+fail() {
+  printf 'revalidate: %s\n' "$*" >&2
+  exit 1
+}
+
+edit=false
+case "${1:-}" in
+  "") ;;
+  --edit) edit=true ;;
+  *) fail "unknown option $1 (use --edit)" ;;
+esac
+
+cd -- "$project_root"
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+git fetch -q origin
+[[ -z $(git status --porcelain) ]] || fail "the working tree has changes; revalidation is of a pushed commit"
+[[ $(git rev-parse HEAD) == "$(git rev-parse origin/main)" ]] \
+  || fail "HEAD is not origin/main: push first (FATHOM_PUSH_DURING_REVIEW=1 git push)"
+commit=$(git rev-parse --short HEAD)
+
+repo=$(git remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
+issue=$(gh issue list --repo "$marketplace" --state open --label submission \
+  --search "\"github.com/$repo\" in:body" --json url --jq '.[0].url')
+[[ -n $issue ]] || fail "no open marketplace submission for $repo"
+gh issue view "$issue" --repo "$marketplace" --json body --jq .body > "$work/live.md"
+
+# Blank lines at either end go.
+trim() {
+  sed -e '/./,$!d' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
+}
+
+# The text under a "### <name>" heading of the issue form.
+section() {
+  awk -v heading="### $1" '$0 == heading { on = 1; next } on && /^### / { exit } on { print }' "$work/live.md" | trim
+}
+
+category=$(section Category)
+tags=$(section Tags | tr -d ' ')
+notes=$(section "Maintainer notes" | grep -v '^Revalidating at ' | trim || true)
+[[ $notes == "_No response_" ]] && notes=""
+notes="${notes:+$notes
+
+}Revalidating at the current main, $commit."
+
+omakit submit . --category "$category" --tags "$tags" --notes "$notes" \
+  --body-out "$work/new.md" --json > "$work/submit.json" || true
+outcome=$(jq -r '.outcome // "unknown"' "$work/submit.json")
+[[ $outcome == ready ]] || fail "omakit submit says $outcome, not ready; run it without --json to see why"
+
+# The protocol: only the maintainer notes may differ.
+without_notes() {
+  awk '/^### Maintainer notes$/ { skip = 1; print; next } /^### / { skip = 0 } !skip' "$1" | trim
+}
+if ! diff <(without_notes "$work/live.md") <(without_notes "$work/new.md") > "$work/other.diff"; then
+  cat "$work/other.diff" >&2
+  fail "the new body changes more than the maintainer notes; show Maarten this difference first"
+fi
+diff "$work/live.md" "$work/new.md" || true
+
+if [[ $edit != true ]]; then
+  printf '\nNothing edited. With Maarten'\''s go: bash bin/revalidate --edit\n'
+  exit 0
+fi
+
+gh issue edit "$issue" --repo "$marketplace" --body-file "$work/new.md" >/dev/null
+printf 'Edited %s; waiting for the marketplace to validate %s...\n' "$issue" "$commit"
+for _ in {1..24}; do
+  if omakit watch "$issue" . 2>&1 | grep -q 'VALIDATION CURRENT'; then
+    printf 'Revalidated: %s is the validated commit.\n' "$commit"
+    exit 0
+  fi
+  sleep 10
+done
+fail "not validated after four minutes; check: omakit watch $issue ."

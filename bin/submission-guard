@@ -1,0 +1,46 @@
+#!/bin/bash
+# Git pre-push hook. Install once per checkout:
+#
+#   ln -sf ../../bin/submission-guard .git/hooks/pre-push
+#
+# While a marketplace submission for this repository is open, the marketplace
+# and its reviewers approve exactly the commit they validated. A push to main
+# moves the default branch past it, and the submission is then "not
+# approvable at its present commit" (omacom/omarchy-plugin-marketplace#8426,
+# 2026-09-24: a README fix pushed after validation). So while a submission is
+# open, a push to main is refused. A fix the review asks for goes out with
+# FATHOM_PUSH_DURING_REVIEW=1, and `bash bin/revalidate` follows at once.
+# When GitHub cannot be asked, the push is refused too.
+
+set -euo pipefail
+
+readonly marketplace="omacom/omarchy-plugin-marketplace"
+
+refuse() {
+  printf 'submission-guard: %s\n' "$1" >&2
+  printf 'A push to main moves it past the commit the marketplace validated, and reviewers\n' >&2
+  printf 'will not approve the submission until it is revalidated. If this push is a fix\n' >&2
+  printf 'the review needs, push with FATHOM_PUSH_DURING_REVIEW=1 and run bash bin/revalidate\n' >&2
+  printf 'right after it (DEVELOPMENT.md, "Submit and track").\n' >&2
+  exit 1
+}
+
+pushes_main=false
+while read -r _ _ remote_ref _; do
+  [[ $remote_ref == refs/heads/main ]] && pushes_main=true
+done
+[[ $pushes_main == true ]] || exit 0
+
+if [[ ${FATHOM_PUSH_DURING_REVIEW:-} == 1 ]]; then
+  printf 'submission-guard: pushing to main during a review; run bash bin/revalidate next.\n' >&2
+  exit 0
+fi
+
+repo=$(git remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
+if ! open=$(gh issue list --repo "$marketplace" --state open --label submission \
+    --search "\"github.com/$repo\" in:body" --json url --jq '.[].url' 2>/dev/null); then
+  refuse "could not ask GitHub whether a submission for $repo is open"
+fi
+[[ -z $open ]] && exit 0
+
+refuse "a marketplace submission for $repo is open: $open"
