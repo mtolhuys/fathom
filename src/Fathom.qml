@@ -548,7 +548,8 @@ Item {
     if (vertical.steps) root.move(vertical.steps)
     const horizontal = Field.wheelSteps(root.wheelCarryX, angleX, pixelX)
     root.wheelCarryX = horizontal.rest
-    if (horizontal.steps) root.workspaceStep(horizontal.steps)
+    // A fast swipe can be several workspaces at once, like several windows above.
+    for (let i = 0; i < Math.abs(horizontal.steps); i++) root.workspaceStep(horizontal.steps)
     root.noteInput()
     return true
   }
