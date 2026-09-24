@@ -42,9 +42,19 @@ pushed=$(git ls-remote --exit-code origin refs/heads/main | cut -f1) \
 commit=$(git rev-parse --short HEAD)
 
 repo=$(git remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
-issue=$(gh issue list --repo "$marketplace" --state open --label submission \
-  --search "\"github.com/$repo\" in:body" --json url --jq '.[0].url')
-[[ -n $issue ]] || fail "no open marketplace submission for $repo"
+# Either form freezes main (bin/submission-guard); only the submission form
+# has a body to render again. An update request ("[Verify]:") is revalidated
+# by editing its Target commit, which omakit does not render.
+query='.[] | select(.title | test("^\\[(Plugin|Verify)\\]:")) | select(.body | contains("github.com/'"$repo"'")) | "\(.url)\t\(.title)"'
+found=$( { gh issue list --repo "$marketplace" --state open --search "\"github.com/$repo\" in:body" \
+    --json url,title,body --jq "$query"; \
+  gh issue list --repo "$marketplace" --state open --author @me --json url,title,body --jq "$query"; } \
+  | sed '/^$/d' | sort -u | head -n 1)
+[[ -n $found ]] || fail "no open marketplace submission or update request for $repo"
+issue=${found%%$'\t'*}
+title=${found#*$'\t'}
+[[ $title == "[Verify]:"* ]] && fail "the open issue is an update request for the listed plugin ($issue): edit its
+Target commit to $(git rev-parse HEAD) and the marketplace validates that commit; revalidate renders the submission form only"
 gh issue view "$issue" --repo "$marketplace" --json body --jq .body > "$work/live.md"
 
 # Blank lines at either end go.

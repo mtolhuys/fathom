@@ -12,8 +12,9 @@
   (#2).
 - Main stays frozen while a marketplace submission is open:
   `bin/submission-guard`, installed as the pre-push hook, refuses a push to
-  main while one is open (`FATHOM_PUSH_DURING_REVIEW=1` lets a fix the review
-  asks for through), and `bash bin/revalidate` then renders the issue body
+  main while a submission or an update request for the listed plugin is open
+  (`FATHOM_PUSH_DURING_REVIEW=1` lets a fix the review asks for through), and
+  `bash bin/revalidate` then renders the submission's issue body
   again by omakit's retry edit protocol and, with `--edit`, watches until the
   marketplace has validated the new commit.
 

@@ -8,8 +8,12 @@
 # moves the default branch past it, and the submission is then "not
 # approvable at its present commit" (omacom/omarchy-plugin-marketplace#8426,
 # 2026-09-24: a README fix pushed after validation). So while a submission is
-# open, a push to main is refused. A fix the review asks for goes out with
-# FATHOM_PUSH_DURING_REVIEW=1, and `bash bin/revalidate` follows at once.
+# open, a push to main is refused; so is one while an update request for the
+# listed plugin (the marketplace's verification form) is open, which reviewers
+# approve at one exact commit the same way. A fix the review asks for goes
+# out with FATHOM_PUSH_DURING_REVIEW=1 (or OMAKIT_PUSH_DURING_REVIEW=1, the
+# name omakit's skills use), and `bash bin/revalidate` follows at once for a
+# submission; an update request is revalidated by editing its Target commit.
 # When GitHub cannot be asked, the push is refused too.
 
 set -euo pipefail
@@ -31,16 +35,26 @@ while read -r _ _ remote_ref _; do
 done
 [[ $pushes_main == true ]] || exit 0
 
-if [[ ${FATHOM_PUSH_DURING_REVIEW:-} == 1 ]]; then
+if [[ ${FATHOM_PUSH_DURING_REVIEW:-} == 1 || ${OMAKIT_PUSH_DURING_REVIEW:-} == 1 ]]; then
   printf 'submission-guard: pushing to main during a review; run bash bin/revalidate next.\n' >&2
   exit 0
 fi
 
 repo=$(git remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
-if ! open=$(gh issue list --repo "$marketplace" --state open --label submission \
-    --search "\"github.com/$repo\" in:body" --json url --jq '.[].url' 2>/dev/null); then
-  refuse "could not ask GitHub whether a submission for $repo is open"
+# A submission ("[Plugin]:") and an update request ("[Verify]:") both count;
+# their labels arrive only once the marketplace has run, so the title decides.
+# GitHub's search index can lag a freshly opened issue by minutes, so the live
+# list of the owner's own open issues is read beside it.
+query='.[] | select(.title | test("^\\[(Plugin|Verify)\\]:")) | select(.body | contains("github.com/'"$repo"'")) | .url'
+if ! searched=$(gh issue list --repo "$marketplace" --state open \
+    --search "\"github.com/$repo\" in:body" --json url,title,body --jq "$query" 2>/dev/null); then
+  refuse "could not ask GitHub whether a submission or update for $repo is open"
 fi
+if ! mine=$(gh issue list --repo "$marketplace" --state open --author @me \
+    --json url,title,body --jq "$query" 2>/dev/null); then
+  refuse "could not list your own open issues on $marketplace"
+fi
+open=$(printf '%s\n%s\n' "$searched" "$mine" | sed '/^$/d' | sort -u)
 [[ -z $open ]] && exit 0
 
-refuse "a marketplace submission for $repo is open: $open"
+refuse "a marketplace submission or update request for $repo is open: $open"

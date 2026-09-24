@@ -154,19 +154,24 @@ The skills (`omarchy-plugin-build`, `-check`, `-weigh`, `-submit`,
   - While the submission is open, work lands on other branches or stays
     local. `bin/submission-guard`, installed as the pre-push hook
     (`ln -sf ../../bin/submission-guard .git/hooks/pre-push`), refuses a push
-    to main while a submission for this repository is open, and when GitHub
+    to main while a submission ("[Plugin]:") or an update request for the
+    listed plugin ("[Verify]:") for this repository is open, and when GitHub
     cannot be asked.
   - A fix the review asks for goes out with `FATHOM_PUSH_DURING_REVIEW=1 git
-    push`, and `bash bin/revalidate` follows at once. It runs omakit's retry
-    edit protocol: omakit renders the body again, and nothing but the
-    maintainer notes may change. It shows the difference, and with `--edit`
-    (Maarten's go) edits the issue and watches until the marketplace has
-    validated the new commit.
+    push` (`OMAKIT_PUSH_DURING_REVIEW=1` is accepted too, the name omakit's
+    skills use). For a submission, `bash bin/revalidate` follows at once. It
+    runs omakit's retry edit protocol: omakit renders the body again, and
+    nothing but the maintainer notes may change. It shows the difference, and
+    with `--edit` (Maarten's go) edits the issue and watches until the
+    marketplace has validated the new commit. For an update request, the
+    revalidation is an edit of the issue's Target commit to the new HEAD.
   - `omakit watch <issue> .` saying STALE is never "harmless": it means the
     reviewers cannot approve.
   - Once the plugin is listed, a newer commit goes through the marketplace's
-    verification form ("Verify and publish a newer upstream commit"), not
-    through the submission.
+    verification form ("Verify and publish a newer upstream commit": the
+    plugin id, the repository URL and the full SHA of the pushed HEAD), not
+    through the submission. Its issue freezes main the same way until the
+    marketplace has published the new snapshot.
 
 ## Phases
 

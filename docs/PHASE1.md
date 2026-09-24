@@ -133,20 +133,41 @@ on 2026-09-23 (Omarchy 4.0.4, Hyprland 0.56.2, Quickshell 0.3.1).
   `fathom` submap, altswitch's other Alt chords are gone, and the installed
   tree is HEAD.
 
+## Verified in the omakit lab (0.2.1)
+
+On 2026-09-25, in omakit's disposable Omarchy 4.0.4 guest (Hyprland 0.56.2,
+Quickshell 0.3.1, QEMU's keyboard and tablet), driven with real keys over
+QMP, on 58b0dc6; the run records, documents and screenshots are under
+`~/.local/state/omakit/lab/runs/` (`20260925-002657-fathom-0.2.1`,
+`20260925-005118-fathom-0.2.1`, and the 0.2.0 runs beside them):
+
+- The README block loads the snippet through the installed
+  `bin/load-bindings`, and a config reload (`--fresh`, twice: a device
+  override added and removed) loads it again in a fresh Lua state, with
+  Hyprland's PID unchanged and `configerrors` empty each time.
+- Keys: a quick Alt+Tab, Alt held with Tab and Shift+Tab, Down and Up, Left,
+  a digit, the wheel, a two-token filter typed, Space then Enter, Escape. A
+  chord over a filter that matches nothing closes after the 15 s watchdog;
+  `kb_options` set for the keyboard alone (`hl.device`) commits on the key
+  held for the chord at 60, 20 and 5 ms taps. Both reproduced as bugs on
+  0.2.0 (6e032d0) in the same guest.
+- The field, the sounding line and the map's last-seen frames render
+  (screenshots in the run directories).
+- `omakit weigh` (three runs): no measurable CPU against a 0.07% floor, no
+  child process, memory within the shell's own startup variance; 0.2.0 the
+  same.
+- `omarchy-shell fathom bench 5` with 3 windows: p50 13.0 ms, p95 18.5 ms,
+  p99 20.6 ms (0.2.0: 13.0, 18.3, 22.6), on the guest's virtio-vga.
+
 ## Not yet verified
 
-- Frame times of 0.2 on the device (cards with rounded clipping, shadows and
-  the layer blur): `omarchy-shell fathom bench 10` with 3, 10 and 25 windows.
-- Keys by hand on the device: Alt+Tab quick tap, Alt+Tab+Tab, Alt+Shift+Tab,
-  Alt+arrows, Alt+digits, Alt+letters, Space, Escape, a click, the wheel and a
-  touchpad.
+- Frame times on the device with 10 and 25 windows.
+- A click on a card, the caption and the map, and a touchpad, by hand.
+- A sideways wheel (the guest's tablet delivers none; the multi-step fling
+  is held by the QML test).
 - That the focus request really goes out on Hyprland's restore event (the
   120 ms fallback covers it either way).
 - Focusing a window on a hidden scratchpad.
-- The snapshot grab and the sounding line on the device (built after the
-  last device check).
-- Loading the fixed snippet on the device after `hyprctl reload`.
-- `omakit weigh io.github.mtolhuys.fathom`.
 
 ## Check loop
 

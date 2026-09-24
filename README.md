@@ -207,7 +207,8 @@ had one). Hyprland reloads on save and `Alt`+`Tab` is Omarchy's again.
   if it does not, the plugin is not loaded (`omarchy plugin list`).
   `load-bindings --check` (above) says who owns `Alt`+`Tab`.
 - **Your `Alt` is on another key.** Fathom reads `input:kb_options` at each
-  switch; tell us about a remap it misses.
+  switch, and the key held as `Alt`+`Tab` fires commits too, whatever that
+  keyboard's own options say; tell us about a remap it misses.
 
 ## Development
 
@@ -247,6 +248,15 @@ omakit weigh io.github.mtolhuys.fathom             # restarts the shell; asks fi
 
 Fathom starts no program and keeps no file of its own, so it carries neither
 of omakit's blocks; `DEVELOPMENT.md` says what happens if that ever changes.
+
+## What it weighs
+
+Weighs nothing measurable: no CPU above the floor (0.07%) and no child process, on Omarchy 4.0.0.alpha, measured with omakit weigh on 2026-09-24
+
+Measured with `omakit weigh io.github.mtolhuys.fathom` (three runs) in
+omakit's disposable Omarchy 4.0.4 guest, whose shell reports its version as
+4.0.0.alpha. Memory is not claimed: the shell's own startup variance is larger
+than any difference Fathom makes. 0.2.0 weighed the same there.
 
 ## Known limitations
 

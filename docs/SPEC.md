@@ -245,7 +245,11 @@ or without the submap), for the keys that make Alt: keycodes 64 (Alt_L) and
 `swap_lalt_lwin`, `swap_ralt_rwin`, `ctrl_alt_win`, `alt_win`,
 `ctrl:swap_lalt_lctl`, `swap_ralt_rctl`, `swap_lalt_lctl_lwin`), read from
 `input:kb_options` once per switch. A right Alt that types AltGr
-(`lv3:ralt_switch`, an `intl` or `altgr` variant) does not commit. The
+(`lv3:ralt_switch`, an `intl` or `altgr` variant) does not commit. Because
+`kb_options` can also be set per keyboard (`hl.device`), which the global
+setting does not show, the hook also notes which of the keys those options
+can turn into Alt (keycodes 37, 64, 105, 108, 133 and 134) are down, and
+every one held as the chord fires joins the release set for that switch. The
 overlay also sees the Alt release itself, and when the `fathom` layer closes
 for any reason a `layer.closed` hook leaves the submap, so the user's other
 shortcuts can never be left held. Every handler is idempotent, so two
