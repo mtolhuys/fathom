@@ -206,6 +206,9 @@ TestCase {
     FakeSystem.press("fathom", "next")
     compare(fathom.mode, "hold")
     verify(findChild(fathom, "watchdog").running, "hold mode is never left without the watchdog")
+    compare(JSON.parse(FakeSystem.ipc("fathom").state()).watchdog, true, "and the state says so")
+    FakeSystem.ipc("fathom").pin()
+    compare(JSON.parse(FakeSystem.ipc("fathom").state()).watchdog, false, "a pinned field runs no watchdog")
     fathom.cancel()
   }
 

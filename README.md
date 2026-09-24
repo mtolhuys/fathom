@@ -169,7 +169,7 @@ Without the snippet, any binding can drive Fathom over IPC:
 
 ```bash
 omarchy-shell fathom open       # open for browsing (Enter or click to focus)
-omarchy-shell fathom state      # build identity, open state, counts, filter
+omarchy-shell fathom state      # build identity, open state, watchdog, counts, filter
 omarchy-shell fathom field      # every window with app, workspace, age, depth, fog
 omarchy-shell fathom bench 10   # dive through the field for 10 s with the frame probe on
 omarchy-shell fathom stats      # frame times of the last bench
