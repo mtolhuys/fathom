@@ -38,7 +38,7 @@ if not enabled() then
   return false
 end
 
-local fathom = { holding = false, alt = {} }
+local fathom = { holding = false, alt = {}, down = {} }
 _G.__fathom = fathom
 
 local function send(name)
@@ -58,6 +58,9 @@ local ALT_MOVED = {
   ["ctrl:swap_ralt_rctl"] = { 64, 105 },
   ["ctrl:swap_lalt_lctl_lwin"] = { 133, 108 },
 }
+
+-- Every physical key the options above can turn into Alt.
+local MAY_BE_ALT = { [37] = true, [64] = true, [105] = true, [108] = true, [133] = true, [134] = true }
 
 local function setting(key)
   local ok, value = pcall(hl.get_config, key)
@@ -111,6 +114,13 @@ local function chord(name)
     if not fathom.holding then
       fathom.holding = true
       fathom.alt = alt_keycodes()
+      -- kb_options can also be set per keyboard (hl.device), which the global
+      -- setting above does not show. Whichever of these keys is down as the
+      -- chord fires is what makes Alt on the keyboard in use, so its release
+      -- commits as well.
+      for code in pairs(fathom.down) do
+        fathom.alt[code] = true
+      end
     end
     send(name)
     if fathom.submap and hl.get_current_submap() ~= "fathom" then
@@ -129,9 +139,12 @@ end
 -- read instead (the approach of the altswitch plugin). The release is also
 -- seen when Alt is let go before the overlay has keyboard focus.
 --
--- This runs for every key event, so outside a switch it stays at one boolean.
--- The hooks are set up before anything that could fail.
+-- This runs for every key event, so outside a switch it stays at one table
+-- lookup and one boolean. The hooks are set up before anything that could fail.
 hl.on("input.keyboard.key", function(keycode, _, state)
+  if MAY_BE_ALT[keycode] then
+    fathom.down[keycode] = state ~= 0 or nil
+  end
   if state == 0 and fathom.holding and fathom.alt[keycode] then
     finish(true)
   end

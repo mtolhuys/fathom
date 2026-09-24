@@ -259,6 +259,25 @@ press("ALT + TAB")
 hook()(64, 0, RELEASED)
 check(state.submap == "", "odd settings fall back to the Alt keys")
 
+-- kb_options set for one keyboard (hl.device) do not show in the global
+-- setting: the key held as the chord fires is the one whose release commits.
+state.config["input.kb_options"] = "altwin:swap_alt_win"
+hook()(64, 0, PRESSED)
+press("ALT + TAB")
+hook()(133, 0, RELEASED)
+check(state.submap == "", "the keys the global setting names still commit")
+hook()(64, 0, RELEASED)
+press("ALT + TAB")
+hook()(64, 0, RELEASED)
+check(state.submap == "fathom", "a key let go before the chord is not held")
+hook()(133, 0, RELEASED)
+hook()(64, 0, PRESSED)
+press("ALT + TAB")
+hook()(64, 0, RELEASED)
+check(state.submap == "" and state.dispatch[#state.dispatch].name == "fathom:release",
+  "on a keyboard of its own without the swap, the Alt key held for the chord commits")
+state.config["input.kb_options"] = nil
+
 -- A disabled or removed Fathom takes nothing: Omarchy's Alt+Tab stays.
 shell_json = '{ "plugins": [ { "id": "someone.else" } ] }'
 check(reload() == false and state.calls == 0 and rawget(_G, "__fathom") == nil,
