@@ -32,10 +32,13 @@ cd -- "$project_root"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-git fetch -q origin
 [[ -z $(git status --porcelain) ]] || fail "the working tree has changes; revalidation is of a pushed commit"
-[[ $(git rev-parse HEAD) == "$(git rev-parse origin/main)" ]] \
-  || fail "HEAD is not origin/main: push first (FATHOM_PUSH_DURING_REVIEW=1 git push)"
+# origin's main is asked for its commit, nothing is fetched: the marketplace
+# validates the pushed HEAD, and this checkout only has to be at it.
+pushed=$(git ls-remote --exit-code origin refs/heads/main | cut -f1) \
+  || fail "could not ask origin for its main"
+[[ $(git rev-parse HEAD) == "$pushed" ]] \
+  || fail "HEAD is not origin's main ($pushed): push first (FATHOM_PUSH_DURING_REVIEW=1 git push)"
 commit=$(git rev-parse --short HEAD)
 
 repo=$(git remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
