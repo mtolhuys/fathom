@@ -198,6 +198,17 @@ TestCase {
     verify(!fathom.opened)
   }
 
+  function test_chord_on_an_empty_filter_arms_the_watchdog() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    FakeSystem.ipc("fathom").filter("zzz")
+    compare(fathom.order.length, 0)
+    FakeSystem.press("fathom", "next")
+    compare(fathom.mode, "hold")
+    verify(findChild(fathom, "watchdog").running, "hold mode is never left without the watchdog")
+    fathom.cancel()
+  }
+
   function test_shell_summon_with_step_behaves_like_the_chord() {
     const fathom = createFathom()
     fathom.open('{"step":-1}')

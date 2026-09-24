@@ -469,7 +469,12 @@ Item {
   // field was opened in browse mode (unless it was pinned there on purpose).
   function chordStep(delta) {
     if (root.opened) {
-      if (!root.pinned) root.mode = "hold"
+      if (!root.pinned) {
+        root.mode = "hold"
+        // Armed here, not only by the step: a filter that matches nothing
+        // makes the step a no-op, and hold mode must never run unwatched.
+        watchdog.restart()
+      }
       return root.step(delta)
     }
     return root.openField("hold", delta)
@@ -766,6 +771,7 @@ Item {
   Timer {
     id: watchdog
 
+    objectName: "watchdog"
     interval: 15000
     onTriggered: root.cancel()
   }
