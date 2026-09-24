@@ -469,7 +469,12 @@ Item {
   // field was opened in browse mode (unless it was pinned there on purpose).
   function chordStep(delta) {
     if (root.opened) {
-      if (!root.pinned) root.mode = "hold"
+      if (!root.pinned) {
+        root.mode = "hold"
+        // Armed here, not only by the step: a filter that matches nothing
+        // makes the step a no-op, and hold mode must never run unwatched.
+        watchdog.restart()
+      }
       return root.step(delta)
     }
     return root.openField("hold", delta)
@@ -548,7 +553,8 @@ Item {
     if (vertical.steps) root.move(vertical.steps)
     const horizontal = Field.wheelSteps(root.wheelCarryX, angleX, pixelX)
     root.wheelCarryX = horizontal.rest
-    if (horizontal.steps) root.workspaceStep(horizontal.steps)
+    // A fast swipe can be several workspaces at once, like several windows above.
+    for (let i = 0; i < Math.abs(horizontal.steps); i++) root.workspaceStep(horizontal.steps)
     root.noteInput()
     return true
   }
@@ -765,6 +771,7 @@ Item {
   Timer {
     id: watchdog
 
+    objectName: "watchdog"
     interval: 15000
     onTriggered: root.cancel()
   }

@@ -198,6 +198,17 @@ TestCase {
     verify(!fathom.opened)
   }
 
+  function test_chord_on_an_empty_filter_arms_the_watchdog() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    FakeSystem.ipc("fathom").filter("zzz")
+    compare(fathom.order.length, 0)
+    FakeSystem.press("fathom", "next")
+    compare(fathom.mode, "hold")
+    verify(findChild(fathom, "watchdog").running, "hold mode is never left without the watchdog")
+    fathom.cancel()
+  }
+
   function test_shell_summon_with_step_behaves_like_the_chord() {
     const fathom = createFathom()
     fathom.open('{"step":-1}')
@@ -490,6 +501,17 @@ TestCase {
     // Sideways moves between workspaces.
     fathom.wheel(0, 0, -120, 0)
     compare(fathom.selectedIndex, 2)
+  }
+
+  function test_a_fast_sideways_swipe_crosses_as_many_workspaces() {
+    setUpDesktop([toplevel("a1", 1, 0), toplevel("b2", 2, 1), toplevel("c3", 3, 2)])
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    compare(fathom.selectedIndex, 0)
+    fathom.wheel(0, 0, -240, 0)
+    compare(fathom.selectedIndex, 2, "two steps sideways cross two workspaces")
+    fathom.wheel(0, 0, 240, 0)
+    compare(fathom.selectedIndex, 0, "and two back")
   }
 
   function test_a_window_that_closes_leaves_the_field() {
