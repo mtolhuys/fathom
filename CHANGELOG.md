@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.1 (unreleased)
+
+- The `Alt` release also follows `kb_options` set per keyboard (`hl.device`),
+  which the global setting does not show: the key held as the chord fires is
+  the one whose release commits, whatever that keyboard's options say. Found
+  and fixed by nixfred (#1).
+- A sideways fling crosses as many workspaces as it is worth, the way a dive
+  of several windows already did, and a chord always arms the watchdog when it
+  switches to hold mode, also over a filter that matches nothing. By nixfred
+  (#2).
+
 ## 0.2.0 (2026-09-24)
 
 Phase 1: the product.
