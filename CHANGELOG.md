@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.1 (unreleased)
+## 0.2.1 (2026-09-25)
 
 - The `Alt` release also follows `kb_options` set per keyboard (`hl.device`),
   which the global setting does not show: the key held as the chord fires is
