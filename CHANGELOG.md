@@ -10,6 +10,12 @@
   of several windows already did, and a chord always arms the watchdog when it
   switches to hold mode, also over a filter that matches nothing. By nixfred
   (#2).
+- Main stays frozen while a marketplace submission is open:
+  `bin/submission-guard`, installed as the pre-push hook, refuses a push to
+  main while one is open (`FATHOM_PUSH_DURING_REVIEW=1` lets a fix the review
+  asks for through), and `bash bin/revalidate` then renders the issue body
+  again by omakit's retry edit protocol and, with `--edit`, watches until the
+  marketplace has validated the new commit.
 
 ## 0.2.0 (2026-09-24)
 
