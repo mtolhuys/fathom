@@ -264,6 +264,22 @@ TestCase {
     compare(labels, ["1", "3", "term"])
   }
 
+  function test_scratchpads_can_be_excluded_and_toggled() {
+    const scratch = toplevel("b2", -98, 1)
+    scratch.workspace = { id: -98, name: "special:term" }
+    setUpDesktop([
+      toplevel("a1", 1, 0),
+      scratch,
+      toplevel("e5", 3, 4)
+    ])
+    const fathom = createFathom()
+    fathom.showScratchpads = false
+    FakeSystem.ipc("fathom").open()
+    compare(fathom.field.length, 2)
+    compare(fathom.field[0].address, "a1")
+    compare(fathom.field[1].address, "e5")
+  }
+
   function test_cards_recede_and_the_camera_follows() {
     const fathom = createFathom()
     FakeSystem.ipc("fathom").open()

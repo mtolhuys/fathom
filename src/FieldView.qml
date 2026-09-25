@@ -384,8 +384,8 @@ Item {
 
     Repeater {
       model: view.holding
-        ? [["Tab", "deeper"], ["↑↓", "dive"], ["←→", "workspace"], ["Space", "keep open"], ["Esc", "cancel"]]
-        : [["↑↓", "dive"], ["←→", "workspace"], ["1–9", "go to"], ["Enter", "focus"], ["Esc", view.filtering ? "clear" : "close"]]
+        ? [["Tab", "deeper"], ["↑↓", "dive"], ["←→", "workspace"], ["Space", "keep open"], ["S", "scratchpads"], ["Esc", "cancel"]]
+        : [["↑↓", "dive"], ["←→", "workspace"], ["1–9", "go to"], ["Enter", "focus"], ["S", "scratchpads"], ["Esc", view.filtering ? "clear" : "close"]]
 
       delegate: Row {
         id: hint
