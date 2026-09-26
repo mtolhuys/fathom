@@ -235,6 +235,15 @@ test('app names come from the desktop entry, else from the app id', () => {
   assert.equal(Field.appName('steam'), 'Steam');
 });
 
+test('a window names its icon only as a theme name, never as a path', () => {
+  assert.equal(Field.themeIconName('org.gnome.Nautilus'), 'org.gnome.Nautilus');
+  assert.equal(Field.themeIconName('steam_app_570'), 'steam_app_570');
+  assert.equal(Field.themeIconName('/etc/passwd'), '');
+  assert.equal(Field.themeIconName('../../../tmp/icon'), '');
+  assert.equal(Field.themeIconName('foot?fallback=/etc/passwd'), '');
+  assert.equal(Field.themeIconName(undefined), '');
+});
+
 test('ages read naturally, long and short', () => {
   assert.equal(Field.ageLabel(0, true), 'focused');
   assert.equal(Field.ageLabel(4), 'just now');

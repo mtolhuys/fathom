@@ -810,4 +810,25 @@ TestCase {
     for (let i = 0; i < texts.length; i++)
       compare(texts[i].textFormat, Text.PlainText, "plain text: \"" + texts[i].text + "\"")
   }
+
+  // A window's app id and class are its own choice: a path in them is never
+  // opened as its icon, nor handed to the icon theme (Qt opens an absolute
+  // icon name as a file). A desktop entry's own icon path still works.
+  function test_an_icon_path_comes_only_from_the_desktop_entry() {
+    const windows = [toplevel("a1", 1, 0), toplevel("b2", 1, 1), toplevel("c3", 2, 2)]
+    windows[1].wayland.appId = "/etc/passwd"
+    windows[1].lastIpcObject["class"] = "/etc/passwd"
+    windows[2].wayland.appId = "fathom-test-app"
+    setUpDesktop(windows)
+    FakeSystem.desktopEntries = { "fathom-test-app": { name: "Test App", icon: "/opt/fathom-test/icon.png" } }
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    compare(fathom.field[1].icon, "", "a class that is a path gets no icon")
+    compare(fathom.field[2].icon, "file:///opt/fathom-test/icon.png", "a desktop entry's absolute Icon still works")
+    compare(fathom.field[2].appName, "Test App")
+    verify(FakeSystem.iconRequests.indexOf("foot") !== -1, "a plain app id is still looked up in the icon theme")
+    verify(FakeSystem.iconRequests.every(function(name) { return name.indexOf("/") === -1 }),
+      "no path reached the icon theme: " + JSON.stringify(FakeSystem.iconRequests))
+  }
 }

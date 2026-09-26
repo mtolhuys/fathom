@@ -31,6 +31,16 @@ function appName(appId, desktopName) {
     return out.join(" ");
 }
 
+// A window's app id or class is the window's own choice, so it names an icon
+// only as an icon theme name, never as a file: "" for anything with a slash,
+// which the theme lookup would resolve against the filesystem (Qt opens an
+// absolute icon name as a file, and joins a relative one onto its theme
+// directories).
+function themeIconName(name) {
+    var text = String(name || "");
+    return text.indexOf("/") === -1 ? text : "";
+}
+
 // How long ago a window last had focus, for captions and plane labels. An
 // estimated age (seeded from Hyprland's focus order when the shell started)
 // is not printed as if it were measured.

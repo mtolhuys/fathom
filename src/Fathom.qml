@@ -129,7 +129,9 @@ Item {
     if (key in root.iconCache) return root.iconCache[key]
     const entry = root.desktopEntryFor(appId, windowClass)
     let icon = ""
-    const names = [entry ? String(entry.icon || "") : "", String(appId || ""), String(windowClass || "")]
+    // Only the desktop entry's own Icon may be a file path; the app id and
+    // class are the window's own choice (Field.themeIconName).
+    const names = [entry ? String(entry.icon || "") : "", Field.themeIconName(appId), Field.themeIconName(windowClass)]
     for (let i = 0; i < names.length && !icon; i++) {
       if (!names[i]) continue
       if (names[i].charAt(0) === "/") icon = "file://" + names[i]

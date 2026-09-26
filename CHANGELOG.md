@@ -7,6 +7,9 @@
   from a web address, say) shows as typed and loads nothing. Asked for in the
   marketplace review. `tests/static.test.sh` fails on any Text without
   `textFormat: Text.PlainText`.
+- The icon lookup never turns a window's app id or class into a file path:
+  the window chooses those, so a class like `/etc/passwd` gets the lettered
+  tile, and only a desktop entry's own `Icon` may name a file.
 
 ## 0.2.1 (2026-09-25)
 

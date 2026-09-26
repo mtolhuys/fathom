@@ -10,6 +10,8 @@ QtObject {
   property var ipcHandlers: []
   // Desktop entries by app id, for DesktopEntries.heuristicLookup.
   property var desktopEntries: ({})
+  // Every name Quickshell.iconPath was asked for.
+  property var iconRequests: []
   // Size of the test host for the field (tests/qml/FieldSurface.qml).
   property int surfaceWidth: 800
   property int surfaceHeight: 600
@@ -24,6 +26,7 @@ QtObject {
     shortcuts = []
     ipcHandlers = []
     desktopEntries = ({})
+    iconRequests = []
     surfaceWidth = 800
     surfaceHeight = 600
     backdrop = ""
