@@ -15,6 +15,8 @@ import "Palette.js" as Palette
 Item {
   id: view
 
+  Appearance { id: appearance }
+
   property var controller: null
   readonly property alias probe: probe
   readonly property int planeCount: planes.count
@@ -319,14 +321,15 @@ Item {
 
   Rectangle {
     id: filterBar
+    objectName: "filterBar"
 
     x: view.margin
     y: view.margin
     height: 34 * view.unit
     width: filterRow.implicitWidth + 28 * view.unit
-    radius: height / 2
+    radius: appearance.cornerRadius
     color: view.theme.panel
-    border.width: 1
+    border.width: appearance.borderWidth
     border.color: view.filtering ? view.theme.accent : view.theme.panelBorder
     visible: view.filtering || (view.controller !== null && view.controller.mode === "browse")
 
@@ -407,9 +410,9 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           width: Math.max(height, keyText.implicitWidth + 10 * view.unit)
           height: 18 * view.unit
-          radius: 4 * view.unit
+          radius: appearance.cornerRadius
           color: view.theme.key
-          border.width: 1
+          border.width: appearance.borderWidth
           border.color: view.theme.keyBorder
 
           Text {

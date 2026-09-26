@@ -78,7 +78,65 @@ TestCase {
   }
 
   function init() {
+    Color.shellValues = ({})
+    Style.cornerRadius = 7
+    Style.normalBorderWidth = 1
     setUpDesktop()
+  }
+
+  function verifyAppearance(fathom, radius, borderWidth) {
+    const view = fathom.fieldView
+    const plane = view.planeAt(fathom.selectedIndex)
+    verify(plane !== null)
+    compare(plane.radius, radius)
+    const outline = findChild(plane, "selectionOutline")
+    compare(outline.radius, radius)
+    compare(outline.border.width, borderWidth)
+    compare(outline.anchors.margins, 0)
+    compare(findChild(plane, "previewFrame").radius, radius)
+    const workspace = findChild(view.map, "workspaceSurface")
+    compare(workspace.radius, radius)
+    compare(workspace.border.width, borderWidth)
+    const tile = findChild(view.map.tileFor(fathom.selectedIndex), "tileOutline")
+    compare(tile.radius, radius)
+    compare(tile.border.width, borderWidth)
+    compare(findChild(view, "filterBar").radius, radius)
+    compare(findChild(view, "filterBar").border.width, borderWidth)
+  }
+
+  function test_appearance_follows_shell_tokens_live() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    verifyAppearance(fathom, 7, 1)
+    Style.cornerRadius = 0
+    Style.normalBorderWidth = 2
+    verifyAppearance(fathom, 0, 2)
+    Style.cornerRadius = 12
+    verifyAppearance(fathom, 12, 2)
+  }
+
+  function test_appearance_user_overrides_update_live_and_allow_zero() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    Color.shellValues = ({ "fathom.corner-radius": "0", "fathom.border-width": "2" })
+    verifyAppearance(fathom, 0, 2)
+    Style.cornerRadius = 20
+    Style.normalBorderWidth = 3
+    verifyAppearance(fathom, 0, 2)
+    Color.shellValues = ({ "fathom.corner-radius": "4", "fathom.border-width": "0" })
+    verifyAppearance(fathom, 4, 0)
+    Color.shellValues = ({})
+    verifyAppearance(fathom, 20, 3)
+  }
+
+  function test_appearance_invalid_overrides_fall_back() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    const invalid = ["", " ", "-2", "NaN", "Infinity", "none"]
+    for (let i = 0; i < invalid.length; i++) {
+      Color.shellValues = ({ "fathom.corner-radius": invalid[i], "fathom.border-width": invalid[i] })
+      verifyAppearance(fathom, 7, 1)
+    }
   }
 
   function test_seed_orders_field_front_to_back() {
