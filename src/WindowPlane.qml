@@ -17,6 +17,8 @@ import "Field.js" as Field
 Item {
   id: card
 
+  Appearance { id: appearance }
+
   required property var modelData
   required property int index
 
@@ -57,7 +59,7 @@ Item {
   readonly property real depthScale: Math.min(1, geometry.scale)
   readonly property real headerHeight: Math.max(18 * textUnit, Math.min(30 * textUnit, height * 0.1))
   readonly property real pad: Math.max(3, 8 * unit * depthScale)
-  readonly property real radius: Math.max(4, 11 * unit * depthScale)
+  readonly property real radius: appearance.cornerRadius
   readonly property real fog: entry
     ? theme.fogStrength * Math.min(0.7, Math.max(0, Math.min(1, r)) * (0.12 + Depth.fogForDepth(entry.depth) * 0.75) + 0.05 * Math.max(0, r - 1))
     : 0
@@ -125,7 +127,7 @@ Item {
   Rectangle {
     anchors.fill: parent
     radius: card.radius
-    border.width: 1
+    border.width: appearance.borderWidth
     border.color: card.hovered ? card.theme.cardBorderHover : card.theme.cardBorder
     gradient: Gradient {
       GradientStop { position: 0; color: card.selected ? card.theme.cardSelectedTop : card.theme.cardTop }
@@ -191,12 +193,13 @@ Item {
 
     ClippingRectangle {
       id: frame
+      objectName: "previewFrame"
 
       x: preview.fitted.x
       y: preview.fitted.y
       width: preview.fitted.width
       height: preview.fitted.height
-      radius: Math.max(2, card.radius * 0.55)
+      radius: card.radius
       color: card.theme.bed
 
       // Until a frame arrives, and for windows Hyprland does not render (a
@@ -273,7 +276,7 @@ Item {
       anchors.fill: frame
       radius: frame.radius
       color: "transparent"
-      border.width: 1
+      border.width: appearance.borderWidth
       border.color: card.theme.frameEdge
     }
 
@@ -285,9 +288,9 @@ Item {
       visible: card.showsSnapshot && frame.height > 70 * card.unit
       width: badgeText.implicitWidth + 14 * card.unit
       height: badgeText.implicitHeight + 6 * card.unit
-      radius: height / 2
+      radius: appearance.cornerRadius
       color: card.theme.panel
-      border.width: 1
+      border.width: appearance.borderWidth
       border.color: card.theme.panelBorder
 
       Text {
@@ -310,11 +313,12 @@ Item {
 
   Rectangle {
     anchors.fill: parent
-    anchors.margins: card.selected ? -3 * card.unit : 0
-    radius: card.radius + (card.selected ? 3 * card.unit : 0)
+    objectName: "selectionOutline"
+    anchors.margins: 0
+    radius: card.radius
     color: "transparent"
     visible: card.selected || card.urgent
-    border.width: card.selected ? Math.max(2, 2.5 * card.unit) : 1.5
+    border.width: appearance.borderWidth
     border.color: card.selected ? card.theme.accent : card.theme.urgent
   }
 

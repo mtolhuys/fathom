@@ -178,6 +178,29 @@ omarchy-shell fathom captures   # which cards capture and which received a frame
 
 The full list is in [docs/SPEC.md](docs/SPEC.md#ipc).
 
+## Appearance
+
+Card, preview, workspace and control corners follow Omarchy's
+`Style.cornerRadius` (Hyprland's `decoration:rounding`). Their borders follow
+`Style.normalBorderWidth`, without growing with the monitor size or selection.
+The selected card keeps its accent outline, aligned with the card's edge.
+
+To override Fathom alone, add a section to `~/.config/omarchy/shell.toml`:
+
+```toml
+[fathom]
+corner-radius = 0
+border-width = 2
+```
+
+Both values are nonnegative pixels; zero is supported. Omit a key to follow
+the shell again. Empty, negative or nonnumeric values fall back to the shell.
+Omarchy watches this user file and layers it over the current theme, so these
+preferences update live and survive theme changes and plugin updates. Themes
+may also provide the same `[fathom]` section in their own `shell.toml`.
+Fathom consumes the shell's existing values; it starts no process and performs
+no file I/O. Circular status markers and application artwork retain their shapes.
+
 ## Update
 
 ```bash

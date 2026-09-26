@@ -165,6 +165,7 @@ TestCase {
 
   function init() {
     useTheme("default")
+    Color.shellValues = ({})
   }
 
   function open(count, width, height, mode, rows, monitorX) {
@@ -175,6 +176,12 @@ TestCase {
     else FakeSystem.ipc("fathom").open()
     tryVerify(function() { return fathom.revealed }, 1000)
     return fathom
+  }
+
+  function test_square_appearance() {
+    Color.shellValues = ({ "fathom.corner-radius": "0", "fathom.border-width": "2" })
+    const fathom = open(10, 1600, 1000, "hold")
+    render("square-appearance", fathom)
   }
 
   function test_1_three_windows() {

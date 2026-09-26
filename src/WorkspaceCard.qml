@@ -16,6 +16,8 @@ import "Field.js" as Field
 Item {
   id: card
 
+  Appearance { id: appearance }
+
   required property var modelData
   required property int index
 
@@ -65,10 +67,11 @@ Item {
   Behavior on opacity { NumberAnimation { duration: 140 } }
 
   Rectangle {
+    objectName: "workspaceSurface"
     anchors.fill: parent
-    radius: 10 * card.unit
+    radius: appearance.cornerRadius
     color: card.holdsSelection ? card.theme.mapCardSelected : card.theme.mapCard
-    border.width: card.holdsSelection ? 1.5 : 1
+    border.width: appearance.borderWidth
     border.color: card.holdsSelection ? card.theme.mapCardSelectedBorder : card.theme.mapCardBorder
 
     Behavior on border.color { ColorAnimation { duration: 140 } }
@@ -175,9 +178,9 @@ Item {
       y: card.items.viewport ? card.items.viewport.y : 0
       width: card.items.viewport ? card.items.viewport.width : 0
       height: card.items.viewport ? card.items.viewport.height : 0
-      radius: 4 * card.unit
+      radius: appearance.cornerRadius
       color: card.theme.screen
-      border.width: 1
+      border.width: appearance.borderWidth
       border.color: card.group.onScreen ? card.theme.screenBorderOn : card.theme.screenBorder
     }
 
@@ -232,7 +235,7 @@ Item {
 
         Rectangle {
           anchors.fill: parent
-          radius: Math.min(4 * card.unit, width / 4)
+          radius: appearance.cornerRadius
           color: tile.selected ? card.theme.tileSelected : (hover.containsMouse ? card.theme.tileHover : card.theme.tile)
         }
 
@@ -248,7 +251,7 @@ Item {
           Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
           sourceComponent: ClippingRectangle {
-            radius: Math.min(4 * card.unit, width / 4)
+            radius: appearance.cornerRadius
             color: "transparent"
 
             Image {
@@ -302,7 +305,7 @@ Item {
           anchors.bottom: parent.bottom
           anchors.margins: 1
           height: Math.round(16 * card.textUnit)
-          radius: Math.min(3 * card.unit, height / 2)
+          radius: appearance.cornerRadius
           opacity: tile.showsFrame ? 1 : 0
           visible: opacity > 0
           color: tile.roomy ? card.theme.panel : "transparent"
@@ -337,9 +340,10 @@ Item {
 
         Rectangle {
           anchors.fill: parent
-          radius: Math.min(4 * card.unit, width / 4)
+          radius: appearance.cornerRadius
           color: "transparent"
-          border.width: tile.selected ? Math.max(1.5, 2 * card.unit) : 1
+          objectName: "tileOutline"
+          border.width: appearance.borderWidth
           border.color: tile.selected ? card.theme.accent
             : (tile.urgent ? card.theme.urgent
               : (tile.entry && tile.entry.active ? card.theme.tileBorderActive : card.theme.tileBorder))
