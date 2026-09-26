@@ -37,6 +37,24 @@ Item {
 
   // Read by the shell (isPluginOpen) as well as by the view.
   property bool opened: false
+  // Whether special workspaces (scratchpads) are included in the field.
+  // Defaults to true, configurable in shell.json under this plugin's properties.
+  property bool showScratchpads: true
+
+  function readPluginConfig() {
+    const list = (shell && shell.shellConfig && Array.isArray(shell.shellConfig.plugins)) ? shell.shellConfig.plugins : []
+    for (let i = 0; i < list.length; i++) {
+      if (list[i] && String(list[i].id) === root.pluginId) return list[i]
+    }
+    return ({})
+  }
+
+  onShellChanged: {
+    const cfg = root.readPluginConfig()
+    if (cfg.showScratchpads !== undefined) {
+      root.showScratchpads = Boolean(cfg.showScratchpads)
+    }
+  }
   // Whether the field is drawn. In hold mode it appears after 90 ms
   // (revealTimer), so a quick Alt+Tab switches without flashing the overlay;
   // the surface
@@ -166,12 +184,17 @@ Item {
       const info = root.appInfo(appId, ipc["class"])
       const at = ipc.at || []
       const size = ipc.size || []
+      const isSpecial = Field.isSpecialName(workspaceName)
+
+      // Skip scratchpad windows if configured to do so
+      if (isSpecial && !root.showScratchpads) continue
+
       candidates.push({
         address: toplevel.address,
         toplevel: toplevel,
         hasHandle: !!toplevel.wayland,
         mapped: ipc.mapped,
-        special: Field.isSpecialName(workspaceName),
+        special: isSpecial,
         workspaceId: isFinite(workspaceId) ? workspaceId : null,
         workspaceName: workspaceName,
         monitorName: root.monitorName(toplevel, ipc),
@@ -521,6 +544,15 @@ Item {
     case Qt.Key_Enter:
       if (root.selectedEntry) root.commit()
       return true
+    case Qt.Key_S:
+      if (root.mode === "hold" || (modifiers & Qt.AltModifier) || !root.filterText) {
+        root.showScratchpads = !root.showScratchpads
+        const now = Date.now()
+        const entries = root.currentField(now)
+        root.showField(entries, root.mode, 0, now)
+        return true
+      }
+      break
     case Qt.Key_Escape:
       if (root.filterText) root.setFilter("")
       else root.cancel()
