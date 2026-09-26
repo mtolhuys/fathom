@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2 (2026-09-26)
+
+- Window titles, app names, workspace names and the filter render as plain
+  text, like every other label in the overlay: markup in a title (an image
+  from a web address, say) shows as typed and loads nothing. Asked for in the
+  marketplace review. `tests/static.test.sh` fails on any Text without
+  `textFormat: Text.PlainText`.
+
 ## 0.2.1 (2026-09-25)
 
 - The `Alt` release also follows `kb_options` set per keyboard (`hl.device`),

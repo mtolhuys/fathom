@@ -361,7 +361,7 @@ TestCase {
   function test_ipc_state_reports_build_identity() {
     createFathom()
     const state = JSON.parse(FakeSystem.ipc("fathom").state())
-    compare(state.buildIdentity, "0.2.1-deep")
+    compare(state.buildIdentity, "0.2.2-deep")
     compare(state.opened, false)
     compare(state.usingLua, true)
     compare(state.trackedWindows, 3)
@@ -762,5 +762,52 @@ TestCase {
     verify(!fathom.fieldView.planeAt(0).visible, "its card has faded out behind the camera")
     tryVerify(function() { return "a1" in fathom.snapshots }, 3000, "and still keeps a frame")
     tryVerify(function() { return fathom.fieldView.map.tileFor(0).showsFrame }, 1000, "which the map shows")
+  }
+
+  TextMetrics {
+    id: metrics
+  }
+
+  function textsIn(item, list) {
+    if (item.textFormat !== undefined) list.push(item)
+    for (let i = 0; i < item.children.length; i++) textsIn(item.children[i], list)
+    return list
+  }
+
+  function within(item, ancestor) {
+    for (let at = item; at; at = at.parent) if (at === ancestor) return true
+    return false
+  }
+
+  // A title comes from another program: markup in it is shown as typed, and
+  // no Text in the field reads markup, the fixed labels included.
+  function test_a_title_with_markup_is_shown_as_typed() {
+    const title = '<b>x</b><img src="http://127.0.0.1:9/a.png">'
+    const windows = [toplevel("a1", 1, 0), toplevel("b2", 1, 1), toplevel("c3", 2, 2)]
+    windows[1].title = title
+    setUpDesktop(windows)
+    const fathom = createFathom()
+    FakeSystem.press("fathom", "next")
+    tryVerify(function() { return fathom.revealed }, 1000)
+    compare(fathom.selectedIndex, 1)
+    const view = fathom.fieldView
+    const card = view.planeAt(1)
+    const shows = function(text) {
+      metrics.font = text.font
+      metrics.text = title
+      return text.text === title && text.textFormat === Text.PlainText
+        && Math.abs(text.implicitWidth - metrics.advanceWidth) < 2
+    }
+    verify(textsIn(card, []).some(shows), "the card's header shows the title as typed")
+    const planes = []
+    for (let i = 0; i < view.planeCount; i++) planes.push(view.planeAt(i))
+    const caption = textsIn(view, []).filter(function(text) {
+      return !within(text, view.map) && !planes.some(function(plane) { return within(text, plane) })
+    })
+    verify(caption.some(shows), "the caption shows the title as typed")
+    const texts = textsIn(view, [])
+    verify(texts.length > 20, "found the field's Text items (" + texts.length + ")")
+    for (let i = 0; i < texts.length; i++)
+      compare(texts[i].textFormat, Text.PlainText, "plain text: \"" + texts[i].text + "\"")
   }
 }

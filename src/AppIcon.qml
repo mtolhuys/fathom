@@ -51,6 +51,7 @@ Item {
 
     Text {
       anchors.centerIn: parent
+      textFormat: Text.PlainText
       text: (icon.name || "?").charAt(0).toUpperCase()
       color: "#f4f4f4"
       font.pixelSize: Math.max(6, icon.size * 0.52)

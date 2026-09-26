@@ -59,6 +59,7 @@ Item {
     color: gauge.theme.textFaint
     font.family: Style.font.family
     font.pixelSize: 14 * gauge.textUnit
+    textFormat: Text.PlainText
     text: "≈"
   }
 
@@ -95,6 +96,7 @@ Item {
         color: gauge.theme.textFaint
         font.family: Style.font.family
         font.pixelSize: 10 * gauge.textUnit
+        textFormat: Text.PlainText
         text: Field.depthMarkLabel(tick.index)
       }
     }
@@ -132,6 +134,7 @@ Item {
         color: gauge.theme.textFaint
         font.family: Style.font.family
         font.pixelSize: 9 * gauge.textUnit
+        textFormat: Text.PlainText
         text: "+" + mark.modelData.more
       }
     }

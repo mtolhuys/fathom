@@ -32,7 +32,7 @@ Item {
   property var shell: null
   property var manifest: null
 
-  readonly property string buildIdentity: "0.2.1-deep"
+  readonly property string buildIdentity: "0.2.2-deep"
   readonly property string pluginId: String((manifest && manifest.id) || "io.github.mtolhuys.fathom")
 
   // Read by the shell (isPluginOpen) as well as by the view.

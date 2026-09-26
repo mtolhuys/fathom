@@ -103,6 +103,7 @@ Item {
         font.pixelSize: 14 * card.textUnit
         font.bold: true
         font.italic: card.group.special
+        textFormat: Text.PlainText
         text: card.group.label
       }
 
@@ -111,6 +112,7 @@ Item {
         color: card.theme.textSoft
         font.family: Style.font.family
         font.pixelSize: 11 * card.textUnit
+        textFormat: Text.PlainText
         text: {
           const total = card.group.entries.length
           if (total === 0) return "empty"
@@ -131,6 +133,7 @@ Item {
         color: card.theme.textFaint
         font.family: Style.font.family
         font.pixelSize: 10 * card.textUnit
+        textFormat: Text.PlainText
         text: card.group.monitor
       }
 
@@ -149,6 +152,7 @@ Item {
         color: card.theme.accentText
         font.family: Style.font.family
         font.pixelSize: 10 * card.textUnit
+        textFormat: Text.PlainText
         text: "on screen"
       }
     }
@@ -183,6 +187,7 @@ Item {
       color: card.theme.textFaint
       font.family: Style.font.family
       font.pixelSize: 10 * card.textUnit
+      textFormat: Text.PlainText
       text: "no windows"
     }
 
@@ -283,6 +288,7 @@ Item {
           color: tile.selected ? card.theme.text : card.theme.textSoft
           font.family: Style.font.family
           font.pixelSize: 10 * card.textUnit
+          textFormat: Text.PlainText
           text: tile.title
         }
 
@@ -324,6 +330,7 @@ Item {
             color: card.theme.text
             font.family: Style.font.family
             font.pixelSize: 10 * card.textUnit
+            textFormat: Text.PlainText
             text: tile.title
           }
         }

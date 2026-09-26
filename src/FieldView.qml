@@ -224,6 +224,7 @@ Item {
         font.family: Style.font.family
         font.pixelSize: 20 * view.textUnit
         font.bold: true
+        textFormat: Text.PlainText
         text: {
           const toplevel = view.entry ? view.entry.toplevel : null
           return toplevel && toplevel.title ? String(toplevel.title) : (view.entry ? (view.entry.title || view.entry.appName) : "")
@@ -236,6 +237,7 @@ Item {
         color: view.theme.textSoft
         font.family: Style.font.family
         font.pixelSize: 13 * view.textUnit
+        textFormat: Text.PlainText
         text: {
           const entry = view.entry
           if (!entry) return ""
@@ -262,6 +264,7 @@ Item {
       color: view.theme.textSoft
       font.family: Style.font.family
       font.pixelSize: 13 * view.textUnit
+      textFormat: Text.PlainText
       text: view.controller && view.controller.selectedSlot >= 0
         ? (view.controller.selectedSlot + 1) + " / " + view.controller.order.length : ""
     }
@@ -278,6 +281,7 @@ Item {
       color: view.theme.text
       font.family: Style.font.family
       font.pixelSize: 20 * view.textUnit
+      textFormat: Text.PlainText
       text: "No window matches “" + (view.controller ? view.controller.filterText : "") + "”"
     }
 
@@ -286,6 +290,7 @@ Item {
       color: view.theme.textSoft
       font.family: Style.font.family
       font.pixelSize: 13 * view.textUnit
+      textFormat: Text.PlainText
       text: "Backspace to edit  ·  Esc to clear"
     }
   }
@@ -299,6 +304,7 @@ Item {
     color: view.theme.textSoft
     font.family: Style.font.family
     font.pixelSize: 13 * view.textUnit
+    textFormat: Text.PlainText
     text: {
       const controller = view.controller
       if (!controller) return ""
@@ -342,6 +348,7 @@ Item {
         color: view.filtering ? view.theme.accentText : view.theme.textFaint
         font.family: Style.font.family
         font.pixelSize: 14 * view.textUnit
+        textFormat: Text.PlainText
         text: "/"
       }
 
@@ -350,6 +357,7 @@ Item {
         color: view.filtering ? view.theme.text : view.theme.textFaint
         font.family: Style.font.family
         font.pixelSize: 14 * view.textUnit
+        textFormat: Text.PlainText
         text: view.filtering ? view.controller.filterText : "type to filter"
       }
 
@@ -367,6 +375,7 @@ Item {
         color: view.theme.textSoft
         font.family: Style.font.family
         font.pixelSize: 12 * view.textUnit
+        textFormat: Text.PlainText
         text: view.controller ? view.controller.order.length + " of " + view.controller.field.length : ""
       }
     }
@@ -410,6 +419,7 @@ Item {
             color: view.theme.textSoft
             font.family: Style.font.family
             font.pixelSize: 11 * view.textUnit
+            textFormat: Text.PlainText
             text: hint.modelData[0]
           }
         }
@@ -419,6 +429,7 @@ Item {
           color: view.theme.textFaint
           font.family: Style.font.family
           font.pixelSize: 11 * view.textUnit
+          textFormat: Text.PlainText
           text: hint.modelData[1]
         }
       }

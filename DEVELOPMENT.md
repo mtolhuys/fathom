@@ -52,6 +52,9 @@ Fathom runs inside Maarten's working session. These hold without exception:
   back when it is released, and adds one layer rule.
 - No network, no daemon, no root. The plugin writes no files and starts no
   programs.
+- Every Text renders plain text (`textFormat: Text.PlainText`): window titles,
+  app ids and workspace names come from other programs
+  (`tests/static.test.sh` holds every Text to it).
 - The exclusive keyboard grab exists only while the field is open, and every
   way of ending a switch (Alt release, Escape, click, watchdog) closes it.
 - Captures exist only while the field is open. The last frame of each window

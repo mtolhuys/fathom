@@ -162,6 +162,7 @@ Item {
       font.family: Style.font.family
       font.pixelSize: Math.max(10, Math.min(13 * card.textUnit, card.headerHeight * 0.46))
       font.bold: card.selected
+      textFormat: Text.PlainText
       text: card.titleText || (card.entry ? card.entry.appName : "")
     }
 
@@ -173,6 +174,7 @@ Item {
       color: card.theme.textSoft
       font.family: Style.font.family
       font.pixelSize: Math.max(9, Math.min(11 * card.textUnit, card.headerHeight * 0.4))
+      textFormat: Text.PlainText
       text: card.entry ? Field.ageShort(card.entry.seconds, card.entry.active, card.entry.estimated) : ""
     }
   }
@@ -231,6 +233,7 @@ Item {
           color: card.theme.textSoft
           font.family: Style.font.family
           font.pixelSize: Math.max(10, Math.min(13 * card.textUnit, frame.height * 0.05))
+          textFormat: Text.PlainText
           text: card.entry ? card.entry.appName : ""
         }
 
@@ -242,6 +245,7 @@ Item {
           color: card.theme.textFaint
           font.family: Style.font.family
           font.pixelSize: Math.max(9, Math.min(11 * card.textUnit, frame.height * 0.042))
+          textFormat: Text.PlainText
           text: "off screen \u00b7 no live preview"
         }
       }
@@ -293,6 +297,7 @@ Item {
         color: card.theme.textSoft
         font.family: Style.font.family
         font.pixelSize: Math.max(9, 11 * card.textUnit * Math.max(0.8, card.depthScale))
+        textFormat: Text.PlainText
         text: {
           const snapshot = card.snapshot
           if (!snapshot || !card.controller) return ""

@@ -28,6 +28,41 @@ if matches=$(grep -nE '(XMLHttpRequest|fetch\(|https?://)' "$project_root"/src/*
 $matches"
 fi
 
+# Every Text renders plain text: titles, app names and workspace names come
+# from other programs, and Qt's default (AutoText) would read markup in them,
+# image sources included. The property must sit in the Text's own block, not
+# in a child's; strings and comments are skipped when counting braces.
+plain_text_rule=$(cat <<'AWK'
+FNR == 1 { depth = 0; top = 0 }
+{
+  line = $0
+  gsub(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/, "\"\"", line)
+  sub(/\/\/.*/, "", line)
+  for (i = 1; i <= length(line); i++) {
+    c = substr(line, i, 1)
+    if (c == "{") {
+      depth++
+      if (substr(line, 1, i) ~ /(^|[^A-Za-z0-9_])Text[[:space:]]*\{$/) {
+        top++; at[top] = depth; from[top] = FNR; plain[top] = 0
+      }
+    } else if (c == "}") {
+      if (top > 0 && at[top] == depth) {
+        if (!plain[top]) printf "%s:%d\n", FILENAME, from[top]
+        top--
+      }
+      depth--
+    } else if (top > 0 && depth == at[top] && (i == 1 || substr(line, i - 1, 1) ~ /[^A-Za-z0-9_.]/) \
+        && substr(line, i) ~ /^textFormat[[:space:]]*:[[:space:]]*Text\.PlainText([^A-Za-z0-9_.]|$)/) {
+      plain[top] = 1
+    }
+  }
+}
+AWK
+)
+matches=$(awk "$plain_text_rule" "$project_root"/src/*.qml)
+[[ -z $matches ]] || fail "every Text must set textFormat: Text.PlainText:
+$matches"
+
 # The Hyprland snippet (docs/HYPRLAND-0.56.2-LUA-RELOAD-CRASH.md): its first
 # statement is the load-once guard, it keeps no Hyprland object, and it never
 # tears one down. Removing a keybind from Lua crashed Hyprland 0.56.2.
