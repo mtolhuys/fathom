@@ -70,10 +70,10 @@ end
 local function alt_keycodes()
   local options = "," .. setting("input.kb_options"):gsub("%s", "") .. ","
   local codes = { 64, 108 }
-  for option, moved in pairs(ALT_MOVED) do
-    if options:find("," .. option .. ",", 1, true) then
-      codes = moved
-    end
+  -- In the order written: XKB applies options left to right, so when two of
+  -- them move Alt the later one wins (pairs() would pick one at random).
+  for option in options:gmatch("[^,]+") do
+    codes = ALT_MOVED[option] or codes
   end
   local keys = {}
   for _, code in ipairs(codes) do

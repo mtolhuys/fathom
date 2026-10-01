@@ -254,6 +254,19 @@ check(state.submap == "fathom", "on an intl layout, letting go of AltGr does not
 hook()(64, 0, RELEASED)
 check(state.submap == "", "the left Alt still does")
 state.config["input.kb_variant"] = nil
+-- Two options that move Alt: the later one wins, as in XKB, every time.
+state.config["input.kb_variant"] = nil
+for _, pair in ipairs({
+  { "altwin:swap_alt_win,ctrl:swap_lalt_lctl", 37, 133 },
+  { "ctrl:swap_lalt_lctl,altwin:swap_alt_win", 133, 37 },
+}) do
+  state.config["input.kb_options"] = pair[1]
+  press("ALT + TAB")
+  hook()(pair[3], 0, RELEASED)
+  check(state.submap == "fathom", pair[1] .. ": the earlier option's key does not commit")
+  hook()(pair[2], 0, RELEASED)
+  check(state.submap == "", pair[1] .. ": the later option's key does")
+end
 state.config["input.kb_options"] = { "not a string" }
 press("ALT + TAB")
 hook()(64, 0, RELEASED)
