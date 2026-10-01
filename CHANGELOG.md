@@ -16,6 +16,12 @@
 - `omarchy-shell fathom state` says whether the hold-mode watchdog is
   running (`watchdog`), so a switch stuck in hold mode, or one that runs
   unwatched, shows from the shell. By nixfred (#3).
+- Letting go of `Alt` follows every XKB option that moves `Alt` or takes it
+  off a key, 26 of them, among them `compose:ralt`, `grp:toggle` and
+  `lv3:lalt_switch`, and any two together come out as XKB has them,
+  whatever order they are written in. `altwin:ctrl_alt_win` puts `Alt` on
+  the Windows keys, not on Ctrl as Fathom had it. The Lua tests check every
+  option and every pair against xkbcli. By nixfred (#4).
 - Installing takes two steps, and the README says so right under the
   command: `--enable` loads the overlay but leaves `Alt`+`Tab` where it was
   until Fathom's block is in `bindings.lua`. Another switcher (altswitch,

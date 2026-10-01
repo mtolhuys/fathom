@@ -47,16 +47,41 @@ end
 
 -- The physical keys that make Alt. The key hook below sees key codes, not what
 -- the layout makes of them, and XKB options can move Alt: to the Windows keys,
--- to Ctrl, or turn the right Alt into AltGr. Key codes: 64 and 108 are Alt,
--- 133 and 134 Super, 37 and 105 Control (left and right).
-local ALT_MOVED = {
-  ["altwin:swap_alt_win"] = { 133, 134 },
-  ["altwin:swap_lalt_lwin"] = { 133, 108 },
-  ["altwin:swap_ralt_rwin"] = { 64, 134 },
-  ["altwin:ctrl_alt_win"] = { 37, 105 },
-  ["ctrl:swap_lalt_lctl"] = { 37, 108 },
-  ["ctrl:swap_ralt_rctl"] = { 64, 105 },
-  ["ctrl:swap_lalt_lctl_lwin"] = { 133, 108 },
+-- to Ctrl, or off the right Alt (AltGr, Compose, a layout switch). Key codes:
+-- 64 and 108 are Alt, 133 and 134 Super, 37 and 105 Control (left and right).
+--
+-- Every XKB option that changes which of these keys is Alt, with what it makes
+-- of each key it touches (true: Alt, false: not Alt). XKB's result does not
+-- depend on the order the options are written in, and applying these in this
+-- order gives XKB's result for each option alone and for every pair of them:
+-- tests/fixtures/xkb-alt-keys.txt holds those cases, from xkbcli.
+local ALT_OPTIONS = {
+  { "altwin:alt_win", { [133] = true, [134] = true } },
+  { "altwin:swap_ralt_rwin", { [108] = false, [134] = true } },
+  { "compose:ralt", { [108] = false } },
+  { "ctrl:ralt_rctrl", { [108] = false } },
+  { "grp:lalt_toggle", { [64] = false } },
+  { "grp:switch", { [108] = false } },
+  { "korean:ralt_hangul", { [108] = false } },
+  { "korean:ralt_hanja", { [108] = false } },
+  { "lv3:ralt_switch", { [108] = false } },
+  { "lv3:ralt_switch_multikey", { [108] = false } },
+  { "lv5:ralt_switch", { [108] = false } },
+  { "lv5:ralt_switch_lock", { [108] = false } },
+  { "grp:alt_altgr_toggle", { [64] = true, [108] = false } },
+  { "grp:lswitch", { [64] = false } },
+  { "lv3:alt_switch", { [64] = false, [108] = false } },
+  { "lv3:lalt_switch", { [64] = false } },
+  { "altwin:alt_super_win", { [64] = true, [134] = true } },
+  { "altwin:ctrl_alt_win", { [37] = false, [64] = false, [105] = false, [108] = false, [133] = true, [134] = true } },
+  { "altwin:swap_alt_win", { [64] = false, [108] = false, [133] = true, [134] = true } },
+  { "altwin:swap_lalt_lwin", { [64] = false, [133] = true } },
+  { "ctrl:lctrl_meta", { [37] = true } },
+  { "ctrl:rctrl_ralt", { [105] = true, [108] = false } },
+  { "ctrl:swap_lalt_lctl_lwin", { [37] = false, [64] = false, [133] = true } },
+  { "ctrl:swap_lalt_lctl", { [37] = true, [64] = false } },
+  { "ctrl:swap_ralt_rctl", { [105] = true, [108] = false } },
+  { "grp:toggle", { [108] = false } },
 }
 
 -- Every physical key the options above can turn into Alt.
@@ -69,23 +94,19 @@ end
 
 local function alt_keycodes()
   local options = "," .. setting("input.kb_options"):gsub("%s", "") .. ","
-  local codes = { 64, 108 }
-  -- In the order written: XKB applies options left to right, so when two of
-  -- them move Alt the later one wins (pairs() would pick one at random).
-  for option in options:gmatch("[^,]+") do
-    codes = ALT_MOVED[option] or codes
-  end
-  local keys = {}
-  for _, code in ipairs(codes) do
-    keys[code] = true
-  end
-  if options:find(",altwin:alt_win,", 1, true) then
-    keys[133], keys[134] = true, true
-  end
-  -- A right Alt that types AltGr is not Alt: letting it go must not commit.
+  local keys = { [64] = true, [108] = true }
+  -- A layout whose right Alt types AltGr: letting it go must not commit.
+  -- The options come after the layout, as in XKB.
   local variant = setting("input.kb_variant")
-  if options:find(",lv3:ralt_switch", 1, true) or variant:find("intl", 1, true) or variant:find("altgr", 1, true) then
+  if variant:find("intl", 1, true) or variant:find("altgr", 1, true) then
     keys[108] = nil
+  end
+  for _, option in ipairs(ALT_OPTIONS) do
+    if options:find("," .. option[1] .. ",", 1, true) then
+      for code, alt in pairs(option[2]) do
+        keys[code] = alt or nil
+      end
+    end
   end
   return keys
 end

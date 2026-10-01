@@ -246,7 +246,7 @@ state.config["input.kb_options"] = "ctrl:swap_lalt_lctl"
 press("ALT + TAB")
 hook()(37, 0, RELEASED)
 check(state.submap == "", "with Alt and Ctrl swapped, the physical Ctrl key commits")
-state.config["input.kb_options"] = "grp:alts_toggle"
+state.config["input.kb_options"] = "compose:caps"
 state.config["input.kb_variant"] = "intl"
 press("ALT + TAB")
 hook()(108, 0, RELEASED)
@@ -254,19 +254,50 @@ check(state.submap == "fathom", "on an intl layout, letting go of AltGr does not
 hook()(64, 0, RELEASED)
 check(state.submap == "", "the left Alt still does")
 state.config["input.kb_variant"] = nil
--- Two options that move Alt: the later one wins, as in XKB, every time.
-state.config["input.kb_variant"] = nil
-for _, pair in ipairs({
-  { "altwin:swap_alt_win,ctrl:swap_lalt_lctl", 37, 133 },
-  { "ctrl:swap_lalt_lctl,altwin:swap_alt_win", 133, 37 },
-}) do
-  state.config["input.kb_options"] = pair[1]
-  press("ALT + TAB")
-  hook()(pair[3], 0, RELEASED)
-  check(state.submap == "fathom", pair[1] .. ": the earlier option's key does not commit")
-  hook()(pair[2], 0, RELEASED)
-  check(state.submap == "", pair[1] .. ": the later option's key does")
+
+-- The keys whose release commits under these options, with none held as the
+-- chord fires: "37,133,134", or "-" for none.
+local function commit_keys(options)
+  local found = {}
+  for _, code in ipairs({ 37, 64, 105, 108, 133, 134 }) do
+    state.config["input.kb_options"] = options
+    press("ALT + TAB")
+    hook()(code, 0, RELEASED)
+    if state.submap == "" then
+      table.insert(found, tostring(code))
+    else
+      hook("layer.closed")({ namespace = "fathom" })
+    end
+  end
+  return #found > 0 and table.concat(found, ",") or "-"
 end
+
+-- Two options that move Alt (#4): the order they are written in does not
+-- matter to XKB, which puts Alt on the left Ctrl and both Windows keys.
+for _, options in ipairs({ "altwin:swap_alt_win,ctrl:swap_lalt_lctl", "ctrl:swap_lalt_lctl,altwin:swap_alt_win" }) do
+  check(commit_keys(options) == "37,133,134", options .. ": the left Ctrl and both Windows keys commit")
+end
+
+-- Every XKB option that changes which keys are Alt, alone and in every pair
+-- either way round, against what xkbcli compiles: exactly XKB's Alt keys
+-- commit (tests/fixtures/xkb-alt-keys.txt, from tests/fixtures/xkb-alt-keys.sh).
+local fixture = arg[0]:gsub("lua/bindings%.test%.lua$", "fixtures/xkb-alt-keys.txt")
+local cases, wrong = 0, {}
+for line in io.lines(fixture) do
+  local options, want = line:match("^([^#%s]%S*) (%S+)$")
+  if options then
+    local a, b = options:match("^([^,]+),([^,]+)$")
+    local written = a and { a .. "," .. b, b .. "," .. a } or { options == "-" and "" or options }
+    for _, each in ipairs(written) do
+      cases = cases + 1
+      local got = commit_keys(each)
+      if got ~= want then table.insert(wrong, each .. ": " .. got .. ", XKB " .. want) end
+    end
+  end
+end
+check(cases > 600 and #wrong == 0, cases .. " sets of options commit on exactly XKB's Alt keys"
+  .. (#wrong > 0 and " (" .. table.concat(wrong, "; ", 1, math.min(#wrong, 5)) .. ")" or ""))
+
 state.config["input.kb_options"] = { "not a string" }
 press("ALT + TAB")
 hook()(64, 0, RELEASED)

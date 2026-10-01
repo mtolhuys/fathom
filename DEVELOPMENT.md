@@ -86,6 +86,12 @@ Fathom runs inside Maarten's working session. These hold without exception:
   `tests/fixtures/omarchy-themes.json` holds the palettes Omarchy ships; the
   node tests hold every one to the contrast floors. Refresh it when Omarchy
   adds a theme.
+- Which keys make Alt under `input:kb_options` comes from XKB, never from a
+  guess: `tests/fixtures/xkb-alt-keys.txt` (written by
+  `tests/fixtures/xkb-alt-keys.sh` with xkbcli) holds every option that
+  moves Alt, alone and in pairs, and the Lua tests hold `ALT_OPTIONS` in
+  `hypr/fathom.lua` to it. Run the script again when xkeyboard-config
+  changes.
 - Corner radii and border widths come from `FieldView.appearance` (one
   `src/Appearance.qml`: Omarchy's `Style.cornerRadius` and
   `Style.normalBorderWidth`, or the `[fathom]` section of `shell.toml`),

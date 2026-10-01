@@ -244,11 +244,17 @@ A release bind on a bare modifier only fires when the modifier was tapped on
 its own, so the release comes from a raw `input.keyboard.key` hook, as in the
 altswitch plugin. It acts only while a switch is held (set by the chord, with
 or without the submap), for the keys that make Alt: keycodes 64 (Alt_L) and
-108 (Alt_R), moved by the XKB options that move Alt (`altwin:swap_alt_win`,
-`swap_lalt_lwin`, `swap_ralt_rwin`, `ctrl_alt_win`, `alt_win`,
-`ctrl:swap_lalt_lctl`, `swap_ralt_rctl`, `swap_lalt_lctl_lwin`), read from
-`input:kb_options` once per switch. A right Alt that types AltGr
-(`lv3:ralt_switch`, an `intl` or `altgr` variant) does not commit. Because
+108 (Alt_R), as moved by `input:kb_options`, read once per switch. A right
+Alt that types AltGr (an `intl` or `altgr` variant) does not commit. Every
+XKB option that changes which of the keys 37, 64, 105, 108, 133 and 134 is
+Alt (26 in xkeyboard-config 2.48: `altwin:swap_alt_win`,
+`ctrl:swap_lalt_lctl`, `lv3:ralt_switch`, `compose:ralt`, `grp:toggle` and
+the like) is in the snippet's `ALT_OPTIONS`, with what it makes of each key
+it touches, in the order that reproduces XKB. XKB's result does not depend
+on the order the options are written in (#4 assumed it did; xkbcli shows it
+does not). `tests/fixtures/xkb-alt-keys.txt`, written by
+`tests/fixtures/xkb-alt-keys.sh` from xkbcli, holds every one of them alone
+and every pair, and the Lua tests hold the snippet to it. Because
 `kb_options` can also be set per keyboard (`hl.device`), which the global
 setting does not show, the hook also notes which of the keys those options
 can turn into Alt (keycodes 37, 64, 105, 108, 133 and 134) are down, and
