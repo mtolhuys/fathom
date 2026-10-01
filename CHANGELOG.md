@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 (unreleased)
+## 0.3.0 (2026-10-01)
 
 - Your Omarchy wallpaper sits behind the field, under the theme's veil
   (a little thinner than before, still held to the same contrast floors),
