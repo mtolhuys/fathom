@@ -2,6 +2,11 @@
 
 ## 0.3.0 (unreleased)
 
+- Your Omarchy wallpaper sits behind the field, under the theme's veil
+  (a little thinner than before, still held to the same contrast floors),
+  and a new wallpaper shows the next time the field opens. It loads only
+  while the field is shown, so a quick `Alt`+`Tab` decodes nothing, and
+  fades in once it is ready. By WhoIsCalebBrown (#8).
 - Corners and borders follow Omarchy's appearance: the corner radius is
   Hyprland's `decoration:rounding` (square on a default Omarchy), and idle
   borders take the shell's `[controls]` border width. A `[fathom]` section

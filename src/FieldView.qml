@@ -17,8 +17,11 @@ Item {
   id: view
 
   property var controller: null
-  property url wallpaperUrl: Quickshell.env("HOME")
-    ? "file://" + Quickshell.env("HOME") + "/.local/state/omarchy/current/background" : ""
+  // Omarchy's current wallpaper, the link its own background and lock plugins
+  // read, as a URL encoded the way Omarchy's Util.fileUrl does it.
+  readonly property string wallpaperPath: Quickshell.env("HOME")
+    ? Quickshell.env("HOME") + "/.local/state/omarchy/current/background" : ""
+  property url wallpaperUrl: wallpaperPath ? "file://" + wallpaperPath.split("/").map(encodeURIComponent).join("/") : ""
   readonly property alias wallpaperImage: wallpaperImage
   readonly property alias probe: probe
   readonly property int planeCount: planes.count
@@ -86,15 +89,25 @@ Item {
 
   // ------------------------------------------------------------ backdrop
 
+  // The wallpaper under the veil. Loaded only while the field is shown, so a
+  // quick Alt+Tab decodes nothing, and never cached, so a new wallpaper shows
+  // at the next opening. A large one can take longer to decode than the
+  // field takes to appear: it fades in once it is there.
   Image {
     id: wallpaperImage
     anchors.fill: parent
-    source: view.controller && view.controller.opened ? view.wallpaperUrl : ""
+    source: view.controller && view.controller.revealed ? view.wallpaperUrl : ""
     fillMode: Image.PreserveAspectCrop
     asynchronous: true
     cache: false
     sourceSize.width: width
     sourceSize.height: height
+    opacity: status === Image.Ready ? 1 : 0
+    visible: opacity > 0
+
+    Behavior on opacity {
+      NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+    }
   }
 
   Rectangle {

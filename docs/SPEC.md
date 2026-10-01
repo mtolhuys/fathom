@@ -310,7 +310,11 @@ pointer. To confirm.
   never a capture of its own. Snapshots are grabbed at most once per window
   per 30 s, including the card one step behind the camera (the window you
   were on), which is captured anyway so stepping back is instant.
-- App icons load only while shown.
+- App icons load only while shown. So does the wallpaper: it is decoded when
+  the field is drawn (never for a quick Alt+Tab), at the screen's size,
+  never cached so a new wallpaper shows at the next opening, and dropped
+  when the field closes. It fades in when it is ready, since a large one
+  (a 6144x3456 JPEG takes about 200 ms) can arrive after the field.
 - Per-card blur (the brief's `blur = depth * 6 px`) is not used: the fog
   carries depth, and the compositor's layer blur frosts the background once.
 - The frame probe (a `FrameAnimation` plus the window's `frameSwapped` count)
@@ -347,10 +351,13 @@ the idle border (README "Settings").
   card, tertiary 4.5:1. `muted` is not used: it is a pale border tone on light
   themes and nearly the background on some dark ones. The accent is deepened
   (or lifted) to 3:1 for rings and marks and 4.5:1 as text.
-- The backdrop is the theme background at 80 to 92 % (dark) or 86 to 95 %
-  (light) from top to bottom, over a compositor blur (`hl.layer_rule` with
-  `blur = true`), dense enough that text holds over a bright page behind a
-  dark theme or a dark game behind a light one.
+- The backdrop is Omarchy's current wallpaper
+  (`~/.local/state/omarchy/current/background`, the link Omarchy's own
+  background and lock plugins read) under a veil of the theme background at
+  75 to 86 % (dark) or 82 to 90 % (light) from top to bottom, dense enough
+  that text holds over a bright wallpaper behind a dark theme or a dark one
+  behind a light theme. Without a wallpaper the veil lies over the
+  compositor blur (`hl.layer_rule` with `blur = true`) of the desktop.
 - The node tests hold every theme Omarchy ships to these floors
   (`tests/fixtures/omarchy-themes.json`).
 

@@ -203,6 +203,7 @@ TestCase {
   function render(name, fathom, settleMs) {
     wait(settleMs === undefined ? 450 : settleMs)
     tryCompare(fathom.fieldView.wallpaperImage, "status", Image.Ready, 3000)
+    tryCompare(fathom.fieldView.wallpaperImage, "opacity", 1, 1000)
     // The surface: the field and the desktop behind it.
     const item = fathom.fieldView.parent
     let saved = false

@@ -6,6 +6,7 @@
 import QtQuick
 import QtTest
 import FathomTest
+import Quickshell
 import Quickshell.Hyprland
 import qs.Commons
 import "../src"
@@ -79,6 +80,7 @@ TestCase {
 
   function init() {
     Color.shellValues = ({})
+    Quickshell.environment = ({})
     Style.cornerRadius = 7
     Style.normalBorderWidth = 1
     setUpDesktop()
@@ -293,15 +295,31 @@ TestCase {
     tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
   }
 
-  function test_wallpaper_loads_only_while_the_field_is_open() {
+  function test_wallpaper_loads_only_while_the_field_is_shown() {
     const fathom = createFathom()
     const view = fathom.fieldView
     view.wallpaperUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVQI12P4z8AAAAMBAQAY3Y2wAAAAAElFTkSuQmCC"
     compare(String(view.wallpaperImage.source), "")
     FakeSystem.press("fathom", "next")
-    tryCompare(view.wallpaperImage, "status", Image.Ready, 2000)
+    verify(fathom.opened && !fathom.revealed)
+    compare(String(view.wallpaperImage.source), "", "nothing loads before the field is shown")
     FakeSystem.press("fathom", "release")
-    compare(String(view.wallpaperImage.source), "")
+    wait(150)
+    compare(String(view.wallpaperImage.source), "", "a quick Alt+Tab loads nothing")
+    FakeSystem.press("fathom", "next")
+    tryCompare(view.wallpaperImage, "status", Image.Ready, 2000)
+    tryCompare(view.wallpaperImage, "opacity", 1, 1000)
+    FakeSystem.press("fathom", "release")
+    compare(String(view.wallpaperImage.source), "", "and it goes when the field closes")
+  }
+
+  function test_wallpaper_path_is_a_file_url() {
+    Quickshell.environment = ({ HOME: "/home/a b#1" })
+    const fathom = createFathom()
+    // A "#" in the path stays part of it instead of starting a fragment.
+    compare(fathom.fieldView.wallpaperUrl, Qt.url("file:///home/a%20b%231/.local/state/omarchy/current/background"))
+    Quickshell.environment = ({})
+    compare(String(createFathom().fieldView.wallpaperUrl), "", "no HOME, no wallpaper")
   }
 
   function test_keys_step_and_alt_release_commits() {
