@@ -67,7 +67,7 @@ $matches"
 # statement is the load-once guard, it keeps no Hyprland object, and it never
 # tears one down. Removing a keybind from Lua crashed Hyprland 0.56.2.
 snippet="$project_root/hypr/fathom.lua"
-first_code=$(grep -vE '^[[:space:]]*(--|$)' "$snippet" | head -n 1)
+first_code=$(grep -m 1 -vE '^[[:space:]]*(--|$)' "$snippet")
 [[ $first_code == 'if rawget(_G, "__fathom") then' ]] \
   || fail "hypr/fathom.lua must start with the load-once guard, not: $first_code"
 # hl.unbind("KEYS") unbinds by key, once per Lua state; teardown means a
