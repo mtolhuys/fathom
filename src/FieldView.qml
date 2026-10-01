@@ -6,6 +6,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import qs.Commons // qmllint disable import
 import "Layout.js" as Layout
 import "Field.js" as Field
@@ -16,6 +17,9 @@ Item {
   id: view
 
   property var controller: null
+  property url wallpaperUrl: Quickshell.env("HOME")
+    ? "file://" + Quickshell.env("HOME") + "/.local/state/omarchy/current/background" : ""
+  readonly property alias wallpaperImage: wallpaperImage
   readonly property alias probe: probe
   readonly property int planeCount: planes.count
   readonly property alias map: map
@@ -81,6 +85,17 @@ Item {
   }
 
   // ------------------------------------------------------------ backdrop
+
+  Image {
+    id: wallpaperImage
+    anchors.fill: parent
+    source: view.controller && view.controller.opened ? view.wallpaperUrl : ""
+    fillMode: Image.PreserveAspectCrop
+    asynchronous: true
+    cache: false
+    sourceSize.width: width
+    sourceSize.height: height
+  }
 
   Rectangle {
     anchors.fill: parent

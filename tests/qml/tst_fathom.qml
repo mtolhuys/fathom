@@ -293,6 +293,17 @@ TestCase {
     tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
   }
 
+  function test_wallpaper_loads_only_while_the_field_is_open() {
+    const fathom = createFathom()
+    const view = fathom.fieldView
+    view.wallpaperUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVQI12P4z8AAAAMBAQAY3Y2wAAAAAElFTkSuQmCC"
+    compare(String(view.wallpaperImage.source), "")
+    FakeSystem.press("fathom", "next")
+    tryCompare(view.wallpaperImage, "status", Image.Ready, 2000)
+    FakeSystem.press("fathom", "release")
+    compare(String(view.wallpaperImage.source), "")
+  }
+
   function test_keys_step_and_alt_release_commits() {
     const fathom = createFathom()
     FakeSystem.press("fathom", "next")

@@ -24,6 +24,54 @@ TestCase {
   height: 600
 
   readonly property string outDir: "@OUT@"
+  readonly property string wallpaperUrl: "file://" + outDir + "/wallpaper.png"
+
+  Component {
+    id: wallpaperComponent
+
+    Item {
+      width: 1600
+      height: 1000
+
+      Rectangle {
+        anchors.fill: parent
+        gradient: Gradient {
+          GradientStop { position: 0; color: "#496d99" }
+          GradientStop { position: 0.5; color: "#c9878e" }
+          GradientStop { position: 1; color: "#efb67d" }
+        }
+      }
+
+      Rectangle {
+        x: 1050
+        y: 180
+        width: 250
+        height: 250
+        radius: 125
+        color: "#ffdfad"
+      }
+
+      Rectangle {
+        x: -200
+        y: 580
+        width: 1200
+        height: 700
+        radius: 350
+        rotation: -12
+        color: "#334f72"
+      }
+
+      Rectangle {
+        x: 760
+        y: 660
+        width: 1200
+        height: 620
+        radius: 310
+        rotation: 15
+        color: "#243e5d"
+      }
+    }
+  }
 
   // Omarchy themes as the shell reads them (colors.toml): the stub's own
   // dark palette, two shipped dark themes and the four shipped light ones.
@@ -154,6 +202,7 @@ TestCase {
 
   function render(name, fathom, settleMs) {
     wait(settleMs === undefined ? 450 : settleMs)
+    tryCompare(fathom.fieldView.wallpaperImage, "status", Image.Ready, 3000)
     // The surface: the field and the desktop behind it.
     const item = fathom.fieldView.parent
     let saved = false
@@ -170,9 +219,19 @@ TestCase {
     Style.normalBorderWidth = 1
   }
 
+  function initTestCase() {
+    const wallpaper = createTemporaryObject(wallpaperComponent, testCase)
+    let saved = false
+    wallpaper.grabToImage(function(result) {
+      saved = result.saveToFile(testCase.outDir + "/wallpaper.png")
+    })
+    tryVerify(function() { return saved }, 3000, "saved synthetic wallpaper")
+  }
+
   function open(count, width, height, mode, rows, monitorX) {
     setUpDesktop(count, width, height, rows, monitorX)
     const fathom = createTemporaryObject(fathomComponent, testCase)
+    fathom.fieldView.wallpaperUrl = testCase.wallpaperUrl
     tryVerify(function() { return JSON.parse(FakeSystem.ipc("fathom").state()).seeded === true }, 2000)
     if (mode === "hold") FakeSystem.press("fathom", "next")
     else FakeSystem.ipc("fathom").open()

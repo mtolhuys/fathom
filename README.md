@@ -37,6 +37,9 @@ program, writes no file, and captures windows only while it is open.
   the light fades with it. Click or drag along the line to pick a window by
   how long ago you used it.
 - **The caption.** The selection's title, app, workspace, age and depth.
+- **Your wallpaper.** The current Omarchy wallpaper sits behind the field,
+  under a themed veil that keeps the cards and labels readable. It refreshes
+  the next time you open Fathom after changing your wallpaper.
 - **Your theme, light or dark.** Every color comes from the Omarchy theme and
   follows it live. On a light theme the cards are paper above a pale veil;
   on a dark one, glass in the dark. Text is held to a readable contrast in
