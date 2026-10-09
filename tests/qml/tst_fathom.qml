@@ -44,6 +44,7 @@ TestCase {
       },
       lastIpcObject: {
         mapped: extra.mapped !== false,
+        acceptsInput: extra.acceptsInput,
         focusHistoryID: history,
         size: [1600, 1000],
         grouped: extra.grouped || []
@@ -554,6 +555,23 @@ TestCase {
     Color.shellValues = ({ "fathom.show-scratchpads": "FALSE" })
     compare(fathom.selectedEntry.address, "e5", "a hidden selection moves to the window behind it")
     verify(fathom.opened)
+  }
+
+  function test_game_without_preview_can_be_selected_on_another_workspace() {
+    setUpDesktop([
+      toplevel("a1", 1, 0),
+      toplevel("b2", 21, -1, { noHandle: true, acceptsInput: true }),
+      toplevel("c3", 21, 2, { noHandle: true, acceptsInput: false })
+    ])
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    compare(fathom.field.length, 2)
+    compare(fathom.field[1].address, "b2")
+    compare(fathom.field[1].workspaceId, 21)
+    compare(fathom.field[1].hasHandle, false)
+    FakeSystem.ipc("fathom").step(1)
+    FakeSystem.ipc("fathom").commit()
+    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xb2" })'], 1000)
   }
 
   function test_cards_recede_and_the_camera_follows() {

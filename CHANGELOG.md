@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Keep mapped, input-capable Hyprland windows in Alt+Tab when a Wayland
+  preview handle is unavailable. These windows remain selectable across
+  workspaces and use the existing icon fallback.
+
 ## 0.3.0 (2026-10-01)
 
 - Your Omarchy wallpaper sits behind the field, under the theme's veil
