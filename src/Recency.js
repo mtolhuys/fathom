@@ -117,7 +117,9 @@ function buildField(candidates, state, nowMs, fallbackActive) {
         if (!candidate) continue;
         var key = normalizeAddress(candidate.address);
         if (!key) continue;
-        if (candidate.hasHandle === false) continue;
+        // Preview handles are optional for mapped, input-capable Hyprland clients.
+        // XWayland/Proton games can still be focused by address without one.
+        if (candidate.hasHandle === false && candidate.switchable !== true) continue;
         if (candidate.mapped === false) continue;
 
         var entry = {};

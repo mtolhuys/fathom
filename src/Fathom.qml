@@ -178,6 +178,7 @@ Item {
         address: toplevel.address,
         toplevel: toplevel,
         hasHandle: !!toplevel.wayland,
+        switchable: ipc.mapped === true && ipc.acceptsInput === true,
         mapped: ipc.mapped,
         special: isSpecial,
         workspaceId: isFinite(workspaceId) ? workspaceId : null,

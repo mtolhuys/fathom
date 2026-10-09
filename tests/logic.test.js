@@ -639,3 +639,18 @@ test("a theme's pale muted color never becomes text", () => {
   assert.notEqual(palette.accentText, '#56949f');
   assert.equal(Palette.derive(themes['flexoki-light']).accentText, '#205ea6', 'an accent that reads stays as it is');
 });
+
+test('mapped Proton game without a preview remains searchable and focusable across workspaces', () => {
+  const state = Recency.createState();
+  Recency.recordFocus(state, 'a1', 0);
+  const entries = Recency.buildField([
+    { address: '0xa1', hasHandle: false, switchable: true, mapped: true,
+      title: 'Game', appId: 'steam_app_123', workspaceName: 'Gaming', workspaceId: 21, focusHistoryID: 4 },
+    { address: '0xb2', hasHandle: false, switchable: false, mapped: true, title: 'helper' },
+    { address: '0xc3', hasHandle: false, switchable: true, mapped: false, title: 'unmapped' },
+  ], state, 86400000);
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].title, 'Game');
+  assert.deepEqual(Array.from(Field.visibleOrder(entries, {}, 'gaming')), [0]);
+  assert.equal(Focus.focusRequest(entries[0].address, true), 'hl.dsp.focus({ window = "address:0xa1" })');
+});
