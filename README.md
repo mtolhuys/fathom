@@ -135,8 +135,12 @@ Check who owns `Alt`+`Tab` at any time:
 bash ~/.config/omarchy/plugins/io.github.mtolhuys.fathom/bin/load-bindings --check
 ```
 
-The snippet takes over `Alt`+`Tab` and `Alt`+`Shift`+`Tab` from Omarchy's
-defaults, adds a key hook that reports the `Alt` release (following XKB
+The block only loads Fathom's snippet, `hypr/fathom.lua`, so you need no
+`unbind` of your own: the snippet unbinds `Alt`+`Tab` and
+`Alt`+`Shift`+`Tab` (every binding Omarchy's defaults put on them) and then
+binds its own. It does this only while Fathom is enabled, so with Fathom
+disabled or removed nothing is unbound and Omarchy's `Alt`+`Tab` is back at
+the next config reload. The snippet also adds a key hook that reports the `Alt` release (following XKB
 options that move `Alt`, such as `altwin:swap_alt_win`, and ignoring an
 `AltGr`), and frosts the background behind the overlay.
 
