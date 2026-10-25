@@ -9,7 +9,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell.Widgets
-import qs.Commons // qmllint disable import
+import qs.Commons as Commons // qmllint disable import
 import "Layout.js" as Layout
 import "Field.js" as Field
 
@@ -101,7 +101,7 @@ Item {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         color: card.holdsSelection ? card.theme.accentText : card.theme.text
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 14 * card.textUnit
         font.bold: true
         font.italic: card.group.special
@@ -112,7 +112,7 @@ Item {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         color: card.theme.textSoft
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 11 * card.textUnit
         textFormat: Text.PlainText
         text: {
@@ -133,7 +133,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: card.showMonitor && card.group.monitor.length > 0
         color: card.theme.textFaint
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 10 * card.textUnit
         textFormat: Text.PlainText
         text: card.group.monitor
@@ -152,7 +152,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: card.group.onScreen && card.width > 190 * card.unit
         color: card.theme.accentText
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 10 * card.textUnit
         textFormat: Text.PlainText
         text: "on screen"
@@ -187,7 +187,7 @@ Item {
       anchors.centerIn: parent
       visible: card.group.entries.length === 0
       color: card.theme.textFaint
-      font.family: Style.font.family
+      font.family: Commons.Style.font.family
       font.pixelSize: 10 * card.textUnit
       textFormat: Text.PlainText
       text: "no windows"
@@ -288,7 +288,7 @@ Item {
           horizontalAlignment: Text.AlignHCenter
           elide: Text.ElideRight
           color: tile.selected ? card.theme.text : card.theme.textSoft
-          font.family: Style.font.family
+          font.family: Commons.Style.font.family
           font.pixelSize: 10 * card.textUnit
           textFormat: Text.PlainText
           text: tile.title
@@ -330,7 +330,7 @@ Item {
             visible: tile.roomy
             elide: Text.ElideRight
             color: card.theme.text
-            font.family: Style.font.family
+            font.family: Commons.Style.font.family
             font.pixelSize: 10 * card.textUnit
             textFormat: Text.PlainText
             text: tile.title

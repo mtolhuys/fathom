@@ -8,7 +8,7 @@ import QtTest
 import FathomTest
 import Quickshell
 import Quickshell.Hyprland
-import qs.Commons
+import qs.Commons as Commons
 import "../src"
 import "../src/Depth.js" as Depth
 import "../src/Layout.js" as Layout
@@ -79,10 +79,10 @@ TestCase {
   }
 
   function init() {
-    Color.shellValues = ({})
+    Commons.Color.shellValues = ({})
     Quickshell.environment = ({})
-    Style.cornerRadius = 7
-    Style.normalBorderWidth = 1
+    Commons.Style.cornerRadius = 7
+    Commons.Style.normalBorderWidth = 1
     setUpDesktop()
   }
 
@@ -130,24 +130,24 @@ TestCase {
     const fathom = createFathom()
     FakeSystem.ipc("fathom").open()
     verifyAppearance(fathom, 7, 1)
-    Style.cornerRadius = 0
-    Style.normalBorderWidth = 2
+    Commons.Style.cornerRadius = 0
+    Commons.Style.normalBorderWidth = 2
     verifyAppearance(fathom, 0, 2)
-    Style.cornerRadius = 12
+    Commons.Style.cornerRadius = 12
     verifyAppearance(fathom, 12, 2)
   }
 
   function test_appearance_user_overrides_update_live_and_allow_zero() {
     const fathom = createFathom()
     FakeSystem.ipc("fathom").open()
-    Color.shellValues = ({ "fathom.corner-radius": "0", "fathom.border-width": "2" })
+    Commons.Color.shellValues = ({ "fathom.corner-radius": "0", "fathom.border-width": "2" })
     verifyAppearance(fathom, 0, 2)
-    Style.cornerRadius = 20
-    Style.normalBorderWidth = 3
+    Commons.Style.cornerRadius = 20
+    Commons.Style.normalBorderWidth = 3
     verifyAppearance(fathom, 0, 2)
-    Color.shellValues = ({ "fathom.corner-radius": "4", "fathom.border-width": "0" })
+    Commons.Color.shellValues = ({ "fathom.corner-radius": "4", "fathom.border-width": "0" })
     verifyAppearance(fathom, 4, 0)
-    Color.shellValues = ({})
+    Commons.Color.shellValues = ({})
     verifyAppearance(fathom, 20, 3)
   }
 
@@ -164,13 +164,13 @@ TestCase {
     verify(behind !== null, "a card sits behind the selection")
     verify(behind.depthScale < 1)
     for (const token of [4, 12]) {
-      Style.cornerRadius = token
+      Commons.Style.cornerRadius = token
       compare(front.radius, token)
       verify(behind.radius > 0 && behind.radius < front.radius,
         "the receded card's corner (" + behind.radius + ") is smaller than the front card's (" + front.radius + ")")
       compare(behind.radius, token * behind.depthScale)
     }
-    Style.cornerRadius = 0
+    Commons.Style.cornerRadius = 0
     compare(front.radius, 0)
     compare(behind.radius, 0)
   }
@@ -181,11 +181,11 @@ TestCase {
     const plane = fathom.fieldView.planeAt(fathom.selectedIndex)
     verify(plane.selected)
     const ring = findChild(plane, "selectionOutline")
-    Style.cornerRadius = 0
+    Commons.Style.cornerRadius = 0
     compare(plane.radius, 0)
     compare(ring.anchors.margins, -3 * plane.unit)
     compare(ring.radius, 0)
-    Style.cornerRadius = 12
+    Commons.Style.cornerRadius = 12
     verify(plane.radius > 0)
     compare(ring.radius, plane.radius + 3 * plane.unit)
   }
@@ -210,7 +210,7 @@ TestCase {
     const tile = findChild(view.map.tileFor(fathom.selectedIndex), "tileOutline")
     const idleTile = findChild(view.map.tileFor(fathom.selectedIndex === 0 ? 1 : 0), "tileOutline")
     for (const width of [1, 3]) {
-      Style.normalBorderWidth = width
+      Commons.Style.normalBorderWidth = width
       compare(idle.border.width, width)
       verify(ring.border.width > idle.border.width,
         "the selection ring (" + ring.border.width + ") is wider than the idle border (" + width + ")")
@@ -232,7 +232,7 @@ TestCase {
     verify(appearance.showScratchpads)
     const cases = [["false", false], ["FALSE", false], [" false ", false], ["no", true], ["", true]]
     for (let i = 0; i < cases.length; i++) {
-      Color.shellValues = ({ "fathom.show-scratchpads": cases[i][0] })
+      Commons.Color.shellValues = ({ "fathom.show-scratchpads": cases[i][0] })
       compare(appearance.showScratchpads, cases[i][1], JSON.stringify(cases[i][0]))
       compare(fathom.showScratchpads, cases[i][1], JSON.stringify(cases[i][0]))
     }
@@ -243,7 +243,7 @@ TestCase {
     FakeSystem.ipc("fathom").open()
     const invalid = ["", " ", "-2", "NaN", "Infinity", "none"]
     for (let i = 0; i < invalid.length; i++) {
-      Color.shellValues = ({ "fathom.corner-radius": invalid[i], "fathom.border-width": invalid[i] })
+      Commons.Color.shellValues = ({ "fathom.corner-radius": invalid[i], "fathom.border-width": invalid[i] })
       verifyAppearance(fathom, 7, 1)
     }
   }
@@ -480,7 +480,7 @@ TestCase {
       scratch,
       toplevel("e5", 3, 4)
     ])
-    Color.shellValues = ({ "fathom.show-scratchpads": "false" })
+    Commons.Color.shellValues = ({ "fathom.show-scratchpads": "false" })
     const fathom = createFathom()
     verify(!fathom.showScratchpads)
     FakeSystem.ipc("fathom").open()
@@ -498,7 +498,7 @@ TestCase {
     const scratch = toplevel("b2", -98, 1)
     scratch.workspace = { id: -98, name: "special:term" }
     setUpDesktop([toplevel("a1", 1, 0), scratch, toplevel("e5", 3, 4)])
-    Color.shellValues = ({ "fathom.show-scratchpads": "false" })
+    Commons.Color.shellValues = ({ "fathom.show-scratchpads": "false" })
     const fathom = createFathom()
     openHeld(fathom)
     compare(fathom.selectedEntry.address, "e5")
@@ -532,7 +532,7 @@ TestCase {
     keyPress(Qt.Key_Down)
     compare(fathom.selectedEntry.address, "e5")
 
-    Color.shellValues = ({ "fathom.show-scratchpads": "false" })
+    Commons.Color.shellValues = ({ "fathom.show-scratchpads": "false" })
     compare(Array.from(fathom.order), [0, 2])
     compare(fathom.slots[1], -1)
     compare(fathom.selectedEntry.address, "e5", "the selection stays")
@@ -542,7 +542,7 @@ TestCase {
     compare(summary.text, "2 windows  ·  2 workspaces")
     compare(counter.text, "2 / 2")
 
-    Color.shellValues = ({})
+    Commons.Color.shellValues = ({})
     compare(Array.from(fathom.order), [0, 1, 2])
     compare(fathom.selectedEntry.address, "e5")
     verify(fathom.pinned)
@@ -551,7 +551,7 @@ TestCase {
 
     keyPress(Qt.Key_Up)
     compare(fathom.selectedEntry.address, "b2")
-    Color.shellValues = ({ "fathom.show-scratchpads": "FALSE" })
+    Commons.Color.shellValues = ({ "fathom.show-scratchpads": "FALSE" })
     compare(fathom.selectedEntry.address, "e5", "a hidden selection moves to the window behind it")
     verify(fathom.opened)
   }
@@ -1015,10 +1015,10 @@ TestCase {
     const view = fathom.fieldView
     verify(!view.theme.light, "the stub palette is dark")
     try {
-      Color.foreground = "#575279"
-      Color.background = "#faf4ed"
-      Color.accent = "#56949f"
-      Color.urgent = "#b4637a"
+      Commons.Color.foreground = "#575279"
+      Commons.Color.background = "#faf4ed"
+      Commons.Color.accent = "#56949f"
+      Commons.Color.urgent = "#b4637a"
       verify(view.theme.light, "rose-pine is light")
       compare(view.theme.text, "#575279")
       verify(view.theme.textSoft !== "#cecacd", "its pale muted color is not text")
@@ -1026,10 +1026,10 @@ TestCase {
       verify(view.gauge.theme.light, "the gauge follows")
       verify(view.map.theme.light, "the map follows")
     } finally {
-      Color.foreground = "#ccd0cf"
-      Color.background = "#171717"
-      Color.accent = "#f25623"
-      Color.urgent = "#e0463a"
+      Commons.Color.foreground = "#ccd0cf"
+      Commons.Color.background = "#171717"
+      Commons.Color.accent = "#f25623"
+      Commons.Color.urgent = "#e0463a"
     }
     verify(!view.theme.light)
   }

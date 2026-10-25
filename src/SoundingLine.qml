@@ -8,7 +8,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import qs.Commons // qmllint disable import
+import qs.Commons as Commons // qmllint disable import
 import "Depth.js" as Depth
 import "Layout.js" as Layout
 import "Field.js" as Field
@@ -57,7 +57,7 @@ Item {
     x: gauge.lineX - width / 2
     y: gauge.lineTop - height - 4 * gauge.unit
     color: gauge.theme.textFaint
-    font.family: Style.font.family
+    font.family: Commons.Style.font.family
     font.pixelSize: 14 * gauge.textUnit
     textFormat: Text.PlainText
     text: "≈"
@@ -94,7 +94,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         x: gauge.lineX - 9 * gauge.unit - width
         color: gauge.theme.textFaint
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 10 * gauge.textUnit
         textFormat: Text.PlainText
         text: Field.depthMarkLabel(tick.index)
@@ -132,7 +132,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: mark.modelData.more > 0
         color: gauge.theme.textFaint
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 9 * gauge.textUnit
         textFormat: Text.PlainText
         text: "+" + mark.modelData.more

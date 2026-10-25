@@ -10,7 +10,7 @@ import QtQuick
 import QtTest
 import FathomTest
 import Quickshell.Hyprland
-import qs.Commons
+import qs.Commons as Commons
 import "../src"
 
 TestCase {
@@ -210,10 +210,10 @@ TestCase {
   function useTheme(name) {
     art.theme = name
     const look = art.themes[name]
-    Color.foreground = look.colors[0]
-    Color.background = look.colors[1]
-    Color.accent = look.colors[2]
-    Color.urgent = look.colors[3]
+    Commons.Color.foreground = look.colors[0]
+    Commons.Color.background = look.colors[1]
+    Commons.Color.accent = look.colors[2]
+    Commons.Color.urgent = look.colors[3]
     FakeSystem.appPalette = look.apps
   }
 

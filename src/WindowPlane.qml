@@ -9,7 +9,7 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell.Wayland
 import Quickshell.Widgets
-import qs.Commons // qmllint disable import
+import qs.Commons as Commons // qmllint disable import
 import "Depth.js" as Depth
 import "Layout.js" as Layout
 import "Field.js" as Field
@@ -163,7 +163,7 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       elide: Text.ElideRight
       color: card.theme.text
-      font.family: Style.font.family
+      font.family: Commons.Style.font.family
       font.pixelSize: Math.max(10, Math.min(13 * card.textUnit, card.headerHeight * 0.46))
       font.bold: card.selected
       textFormat: Text.PlainText
@@ -176,7 +176,7 @@ Item {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       color: card.theme.textSoft
-      font.family: Style.font.family
+      font.family: Commons.Style.font.family
       font.pixelSize: Math.max(9, Math.min(11 * card.textUnit, card.headerHeight * 0.4))
       textFormat: Text.PlainText
       text: card.entry ? Field.ageShort(card.entry.seconds, card.entry.active, card.entry.estimated) : ""
@@ -236,7 +236,7 @@ Item {
           elide: Text.ElideRight
           visible: frame.height > 110 * card.unit
           color: card.theme.textSoft
-          font.family: Style.font.family
+          font.family: Commons.Style.font.family
           font.pixelSize: Math.max(10, Math.min(13 * card.textUnit, frame.height * 0.05))
           textFormat: Text.PlainText
           text: card.entry ? card.entry.appName : ""
@@ -248,7 +248,7 @@ Item {
           elide: Text.ElideRight
           visible: card.parked && frame.height > 130 * card.unit
           color: card.theme.textFaint
-          font.family: Style.font.family
+          font.family: Commons.Style.font.family
           font.pixelSize: Math.max(9, Math.min(11 * card.textUnit, frame.height * 0.042))
           textFormat: Text.PlainText
           text: "off screen \u00b7 no live preview"
@@ -300,7 +300,7 @@ Item {
 
         anchors.centerIn: parent
         color: card.theme.textSoft
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: Math.max(9, 11 * card.textUnit * Math.max(0.8, card.depthScale))
         textFormat: Text.PlainText
         text: {

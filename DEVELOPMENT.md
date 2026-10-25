@@ -209,6 +209,9 @@ Where the platform does not do what the spec expected:
   installed Quickshell win over the stub modules on the import path unless
   `--bare` is given, and flags a `property var state` on an Item as
   overriding `Item.state`.
+- Qt 6.12's QtQuick has a `Color` type of its own, and in the offscreen
+  tests it wins over `qs.Commons`' `Color`. Import `qs.Commons as Commons`
+  and write `Commons.Color` and `Commons.Style`, as Omarchy's shell does.
 - `omakit verify` runs the marketplace baseline only when `origin` is a
   github.com remote.
 - `npx skills add mtolhuys/omakit` replaces the `~/.claude/skills` symlinks

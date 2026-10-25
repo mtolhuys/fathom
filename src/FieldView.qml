@@ -7,7 +7,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import qs.Commons // qmllint disable import
+import qs.Commons as Commons // qmllint disable import
 import "Layout.js" as Layout
 import "Field.js" as Field
 import "Focus.js" as Focus
@@ -30,7 +30,7 @@ Item {
   // Every color the field draws with, derived from the theme (light or dark)
   // and derived again when the theme changes (Palette.js).
   readonly property var theme: Palette.derive({
-    foreground: Color.foreground, background: Color.background, accent: Color.accent, urgent: Color.urgent
+    foreground: Commons.Color.foreground, background: Commons.Color.background, accent: Commons.Color.accent, urgent: Commons.Color.urgent
   })
   // Corner radius and border width: Omarchy's style tokens, or the user's
   // [fathom] section of shell.toml (Appearance.qml). One instance for the
@@ -40,7 +40,7 @@ Item {
   // One unit is a pixel on a 1000 px tall screen; everything scales with it.
   readonly property real unit: Math.max(0.75, Math.min(1.6, height / 1000))
   // Text also follows Omarchy's text size (`omarchy display text size`).
-  readonly property real textUnit: unit * Math.max(0.85, Math.min(1.6, Number(Style.fontScale) || 1))
+  readonly property real textUnit: unit * Math.max(0.85, Math.min(1.6, Number(Commons.Style.fontScale) || 1))
   readonly property real margin: Math.max(16, width * 0.022)
   readonly property var entry: controller ? controller.selectedEntry : null
   readonly property bool holding: controller !== null && controller.mode === "hold"
@@ -254,7 +254,7 @@ Item {
         width: parent.width
         elide: Text.ElideRight
         color: view.theme.text
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 20 * view.textUnit
         font.bold: true
         textFormat: Text.PlainText
@@ -268,7 +268,7 @@ Item {
         width: parent.width
         elide: Text.ElideRight
         color: view.theme.textSoft
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 13 * view.textUnit
         textFormat: Text.PlainText
         text: {
@@ -296,7 +296,7 @@ Item {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       color: view.theme.textSoft
-      font.family: Style.font.family
+      font.family: Commons.Style.font.family
       font.pixelSize: 13 * view.textUnit
       textFormat: Text.PlainText
       text: view.controller && view.controller.selectedSlot >= 0
@@ -313,7 +313,7 @@ Item {
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
       color: view.theme.text
-      font.family: Style.font.family
+      font.family: Commons.Style.font.family
       font.pixelSize: 20 * view.textUnit
       textFormat: Text.PlainText
       text: "No window matches “" + (view.controller ? view.controller.filterText : "") + "”"
@@ -322,7 +322,7 @@ Item {
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
       color: view.theme.textSoft
-      font.family: Style.font.family
+      font.family: Commons.Style.font.family
       font.pixelSize: 13 * view.textUnit
       textFormat: Text.PlainText
       text: "Backspace to edit  ·  Esc to clear"
@@ -340,7 +340,7 @@ Item {
     y: view.margin + 8 * view.unit
     visible: !filterBar.visible && view.controller !== null
     color: view.theme.textSoft
-    font.family: Style.font.family
+    font.family: Commons.Style.font.family
     font.pixelSize: 13 * view.textUnit
     textFormat: Text.PlainText
     text: {
@@ -385,7 +385,7 @@ Item {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         color: view.filtering ? view.theme.accentText : view.theme.textFaint
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 14 * view.textUnit
         textFormat: Text.PlainText
         text: "/"
@@ -394,7 +394,7 @@ Item {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         color: view.filtering ? view.theme.text : view.theme.textFaint
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 14 * view.textUnit
         textFormat: Text.PlainText
         text: view.filtering ? view.controller.filterText : "type to filter"
@@ -412,7 +412,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: view.filtering
         color: view.theme.textSoft
-        font.family: Style.font.family
+        font.family: Commons.Style.font.family
         font.pixelSize: 12 * view.textUnit
         textFormat: Text.PlainText
         text: view.controller ? view.controller.order.length + " of " + view.controller.field.length : ""
@@ -456,7 +456,7 @@ Item {
 
             anchors.centerIn: parent
             color: view.theme.textSoft
-            font.family: Style.font.family
+            font.family: Commons.Style.font.family
             font.pixelSize: 11 * view.textUnit
             textFormat: Text.PlainText
             text: hint.modelData[0]
@@ -466,7 +466,7 @@ Item {
         Text {
           anchors.verticalCenter: parent.verticalCenter
           color: view.theme.textFaint
-          font.family: Style.font.family
+          font.family: Commons.Style.font.family
           font.pixelSize: 11 * view.textUnit
           textFormat: Text.PlainText
           text: hint.modelData[1]
