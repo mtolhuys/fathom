@@ -98,7 +98,7 @@ fi
 [[ -f $snippet ]] || fail "Fathom is not installed ($snippet); run bash bin/dev-sync"
 
 # The snippet itself must be safe to load (the same rules as tests/static.test.sh).
-first_code=$(grep -vE '^[[:space:]]*(--|$)' "$snippet" | head -n 1)
+first_code=$(grep -m 1 -vE '^[[:space:]]*(--|$)' "$snippet")
 [[ $first_code == 'if rawget(_G, "__fathom") then' ]] \
   || fail "the installed snippet has no load-once guard; refusing to load it (see $crash_doc)"
 if grep -qE '(:(remove|unbind|set_enabled)|\.(remove|set_enabled))[[:space:]]*\(' "$snippet"; then
