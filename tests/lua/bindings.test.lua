@@ -1,7 +1,8 @@
 -- Loads hypr/fathom.lua against a recording mock of Hyprland's `hl` table and
 -- checks what it binds, the submap it holds while Alt is down, what the raw
 -- key hook forwards (following XKB options that move Alt), that the overlay
--- closing always leaves the submap, that a disabled Fathom takes nothing, and
+-- closing always leaves the submap, that a reload mid-switch leaves it too,
+-- that a disabled Fathom takes nothing, and
 -- that a second load in the same Lua state is a no-op.
 --
 --   lua tests/lua/bindings.test.lua hypr/fathom.lua
@@ -322,10 +323,38 @@ check(state.submap == "" and state.dispatch[#state.dispatch].name == "fathom:rel
   "on a keyboard of its own without the swap, the Alt key held for the chord commits")
 state.config["input.kb_options"] = nil
 
+-- A config reload starts a fresh Lua state but keeps Hyprland's submap (#12).
+-- Reloaded mid-switch, the new state must leave the fathom submap itself:
+-- nothing else would, and it holds every other binding.
+local function reload_in(submap)
+  _G.__fathom = nil
+  state = fresh()
+  state.submap = submap
+  return dofile(path)
+end
+reload_in("fathom")
+check(state.submap == "" and #state.dispatch == 1 and active("")["ALT + TAB"] ~= nil,
+  "a reload during a switch leaves the fathom submap and binds as usual")
+press("ALT + TAB")
+hook()(64, 0, RELEASED)
+check(sent({ "fathom:next", "fathom:release" }) and state.submap == "", "and the next switch works")
+reload_in("resize")
+check(state.submap == "resize" and #state.dispatch == 0, "a reload keeps another submap")
+local get_current_submap = api.get_current_submap
+api.get_current_submap = function() error("no such function") end
+check(reload_in("fathom") == true and active("")["ALT + TAB"] ~= nil,
+  "a Hyprland without get_current_submap still gets Alt+Tab")
+api.get_current_submap = get_current_submap
+
 -- A disabled or removed Fathom takes nothing: Omarchy's Alt+Tab stays.
 shell_json = '{ "plugins": [ { "id": "someone.else" } ] }'
-check(reload() == false and state.calls == 0 and rawget(_G, "__fathom") == nil,
-  "without Fathom in shell.json the snippet makes no call and says so")
+check(reload() == false and #state.binds == 0 and #state.hooks == 0 and #state.unbind == 0
+  and #state.dispatch == 0 and #state.layer_rule == 0 and rawget(_G, "__fathom") == nil,
+  "without Fathom in shell.json the snippet takes nothing and says so")
+-- Disabled with its submap left behind: the submap is gone from the new
+-- config, and with it the chords that would end it.
+check(reload_in("fathom") == false and state.submap == "" and #state.binds == 0,
+  "a disabled Fathom still leaves a fathom submap a reload left behind")
 shell_json = nil
 check(reload() == true and active("")["ALT + TAB"] ~= nil, "a shell.json that cannot be read counts as enabled")
 

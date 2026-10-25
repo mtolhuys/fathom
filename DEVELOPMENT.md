@@ -212,6 +212,8 @@ Where the platform does not do what the spec expected:
 - Qt 6.12's QtQuick has a `Color` type of its own, and in the offscreen
   tests it wins over `qs.Commons`' `Color`. Import `qs.Commons as Commons`
   and write `Commons.Color` and `Commons.Style`, as Omarchy's shell does.
+- A Hyprland config reload starts a fresh Lua state but keeps the current
+  submap, so `hypr/fathom.lua` leaves a `fathom` submap at load (#12).
 - `omakit verify` runs the marketplace baseline only when `origin` is a
   github.com remote.
 - `npx skills add mtolhuys/omakit` replaces the `~/.claude/skills` symlinks

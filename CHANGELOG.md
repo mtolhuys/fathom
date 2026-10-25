@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- A Hyprland config reload in the middle of a switch no longer leaves
+  every other shortcut dead. The reload keeps Hyprland's submap but starts
+  a fresh Lua state, so nothing was left to end Fathom's submap; the
+  snippet now leaves it when it loads, also when Fathom is disabled.
+  Reported by lester2pastm (#12).
+
 ## 0.3.0 (2026-10-01)
 
 - Your Omarchy wallpaper sits behind the field, under the theme's veil

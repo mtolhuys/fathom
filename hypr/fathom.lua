@@ -21,6 +21,17 @@ if rawget(_G, "__fathom") then
   return true
 end
 
+-- A config reload starts a fresh Lua state but keeps Hyprland's current
+-- submap. Reloaded during a switch, the fathom submap would stay with nothing
+-- left to end it, and hold every other binding (#12). A load is the start of
+-- a session or a reload, so the submap is never Fathom's own here: leave it,
+-- enabled or not. Guarded like the cosmetics below: it must cost nothing else.
+pcall(function()
+  if hl.get_current_submap() == "fathom" then
+    hl.dispatch(hl.dsp.submap("reset"))
+  end
+end)
+
 -- Fathom takes Alt+Tab only while the shell has it enabled: `omarchy plugin
 -- disable` and `remove` take its entry out of shell.json. Read at every config
 -- load; a shell.json that cannot be read counts as enabled.
@@ -114,7 +125,8 @@ end
 -- The end of a switch, however it ends: Alt let go, or the overlay closing on
 -- its own (Escape, a click, the watchdog, or a release only the overlay saw).
 -- Leaves the submap in every case, so the user's other shortcuts can never be
--- left held; forwards the release only when Alt was let go. Idempotent.
+-- left held (a reload mid-switch is handled at load); forwards the release
+-- only when Alt was let go. Idempotent.
 local function finish(release)
   if not fathom.holding then
     return
