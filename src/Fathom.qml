@@ -41,6 +41,7 @@ Item {
   // `show-scratchpads` in the [fathom] section of shell.toml (Appearance.qml),
   // live. The map shows them either way.
   readonly property bool showScratchpads: surface.view.appearance.showScratchpads
+  readonly property bool openOnSingle: surface.view.appearance.openOnSingle
   onShowScratchpadsChanged: if (root.opened) root.refreshOrder()
 
   // Whether the field is drawn. In hold mode it appears after 90 ms
@@ -382,8 +383,10 @@ Item {
 
     const now = Date.now()
     const entries = root.currentField(now)
-    // Holding Alt+Tab with a single window has nowhere to go.
-    if (entries.length < (nextMode === "hold" ? 2 : 1)) return false
+    // Holding Alt+Tab with a single window has nowhere to go, unless the user
+    // opted in via `open-on-single` (then the field opens for browsing).
+    const minWindows = (nextMode === "hold" && !root.openOnSingle) ? 2 : 1
+    if (entries.length < minWindows) return false
     root.showField(entries, nextMode, step, now)
     return true
   }

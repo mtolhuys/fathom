@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `open-on-single = true` in the `[fathom]` section of `shell.toml` makes the
+  Alt chord open the field even when there is only one window, instead of
+  doing nothing. Defaults to `true`.
+
 ## 0.3.0 (2026-10-01)
 
 - Your Omarchy wallpaper sits behind the field, under the theme's veil
