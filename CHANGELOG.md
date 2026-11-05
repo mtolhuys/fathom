@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 (2026-11-05)
 
 - A Hyprland config reload in the middle of a switch no longer leaves
   every other shortcut dead. The reload keeps Hyprland's submap but starts
