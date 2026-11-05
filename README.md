@@ -231,6 +231,8 @@ the shell again: `corner-radius` falls back to Hyprland's rounding,
 `border-width` to the shell's `[controls]` border width (not Hyprland's
 `border_size`). Empty, negative or nonnumeric values fall back the same way.
 Only `false` (in any case) hides scratchpads; any other value keeps them.
+Only `true` (in any case) turns `open-on-single` on; any other value leaves
+it off.
 Omarchy watches this user file and layers it over the current theme, so these
 preferences update live, even while the overlay is open, and survive theme
 changes and plugin updates. Themes may also provide the same `[fathom]`

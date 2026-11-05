@@ -382,6 +382,48 @@ TestCase {
     compare(fathom.mode, "browse")
   }
 
+  // `open-on-single` opens the field on one window: its card stands in front,
+  // the watchdog runs, a second Tab stays on it and the release ends the switch.
+  function test_open_on_single_holds_the_field_on_one_window() {
+    setUpDesktop([toplevel("a1", 1, 0)])
+    Commons.Color.shellValues = ({ "fathom.open-on-single": "true" })
+    const fathom = createFathom()
+    FakeSystem.press("fathom", "next")
+    verify(fathom.opened)
+    compare(fathom.mode, "hold")
+    compare(fathom.selectedIndex, 0)
+    verify(JSON.parse(FakeSystem.ipc("fathom").state()).watchdog)
+    tryVerify(function() { return fathom.revealed }, 1000)
+    verify(fathom.fieldView.planeAt(0).visible, "its one card is in front")
+    FakeSystem.press("fathom", "next")
+    compare(fathom.selectedIndex, 0)
+    FakeSystem.press("fathom", "previous")
+    compare(fathom.selectedIndex, 0)
+    FakeSystem.press("fathom", "release")
+    verify(!fathom.opened)
+  }
+
+  // Nothing to show is still nothing to show, and the setting applies live.
+  function test_open_on_single_still_needs_a_window_and_follows_the_setting() {
+    setUpDesktop([toplevel("a1", 1, 0)])
+    Commons.Color.shellValues = ({ "fathom.open-on-single": "true" })
+    const fathom = createFathom()
+    FakeSystem.press("fathom", "next")
+    verify(fathom.opened)
+    FakeSystem.press("fathom", "release")
+    verify(!fathom.opened)
+
+    Commons.Color.shellValues = ({})
+    FakeSystem.press("fathom", "next")
+    verify(!fathom.opened)
+
+    Commons.Color.shellValues = ({ "fathom.open-on-single": "true" })
+    Hyprland.toplevels = { values: [] }
+    FakeSystem.press("fathom", "next")
+    verify(!fathom.opened)
+    compare(FakeSystem.ipc("fathom").hold(1), "no windows")
+  }
+
   function test_browse_ignores_alt_release_and_enter_commits() {
     const fathom = createFathom()
     compare(FakeSystem.ipc("fathom").open(), "ok")

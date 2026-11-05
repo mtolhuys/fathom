@@ -384,7 +384,7 @@ Item {
     const now = Date.now()
     const entries = root.currentField(now)
     // Holding Alt+Tab with a single window has nowhere to go, unless the user
-    // opted in via `open-on-single` (then the field opens for browsing).
+    // asked to see the field anyway with `open-on-single`.
     const minWindows = (nextMode === "hold" && !root.openOnSingle) ? 2 : 1
     if (entries.length < minWindows) return false
     root.showField(entries, nextMode, step, now)
