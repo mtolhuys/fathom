@@ -238,6 +238,19 @@ TestCase {
     }
   }
 
+  // Off unless the value is "true", in any case and with spaces around it.
+  function test_appearance_open_on_single_is_opt_in() {
+    const fathom = createFathom()
+    const appearance = fathom.fieldView.appearance
+    verify(!appearance.openOnSingle)
+    const cases = [["true", true], ["TRUE", true], [" true ", true], ["false", false], ["yes", false], ["", false]]
+    for (let i = 0; i < cases.length; i++) {
+      Commons.Color.shellValues = ({ "fathom.open-on-single": cases[i][0] })
+      compare(appearance.openOnSingle, cases[i][1], JSON.stringify(cases[i][0]))
+      compare(fathom.openOnSingle, cases[i][1], JSON.stringify(cases[i][0]))
+    }
+  }
+
   function test_appearance_invalid_overrides_fall_back() {
     const fathom = createFathom()
     FakeSystem.ipc("fathom").open()

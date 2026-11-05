@@ -221,7 +221,8 @@ named ones, then scratchpads.
   card in the Deep only highlights it, because the Deep moves under the
   pointer. **(decision)**
 - Wheel notches step one window; touchpad pixels add up (60 px per window).
-- Hold mode needs at least two windows; browse needs one.
+- Hold mode needs at least two windows unless `open-on-single = true`; browse
+  needs one.
 - Watchdog: in hold mode, 15 s without input (any key, the wheel, pointer
   movement) closes the field without focusing, in case an Alt release is ever
   missed.

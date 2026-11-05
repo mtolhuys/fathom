@@ -7,6 +7,9 @@
   a fresh Lua state, so nothing was left to end Fathom's submap; the
   snippet now leaves it when it loads, also when Fathom is disabled.
   Reported by lester2pastm (#12).
+- `open-on-single = true` in the `[fathom]` section of `shell.toml` makes the
+  Alt chord open the field even when there is only one window, instead of
+  doing nothing. Off by default.
 
 ## 0.3.0 (2026-10-01)
 

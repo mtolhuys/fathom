@@ -216,6 +216,7 @@ To change Fathom alone, add a section to `~/.config/omarchy/shell.toml`:
 corner-radius = 0
 border-width = 2
 show-scratchpads = false
+open-on-single = true
 ```
 
 | Key | Default | Description |
@@ -223,6 +224,7 @@ show-scratchpads = false
 | `corner-radius` | Hyprland's rounding | The front card's corner, in pixels. |
 | `border-width` | the shell's `[controls]` border width | Idle borders, in pixels. |
 | `show-scratchpads` | `true` | When `false`, windows on special workspaces (scratchpads) drop out of the visible depth stack while staying visible on the workspace map. |
+| `open-on-single` | `false` | When `true`, the Alt chord opens the field even with a single window instead of doing nothing. |
 
 Both sizes are nonnegative pixels; zero is supported. Omit a key to follow
 the shell again: `corner-radius` falls back to Hyprland's rounding,

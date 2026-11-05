@@ -10,6 +10,9 @@ QtObject {
   // Scratchpads (special workspaces) stay in the Deep unless the value is
   // "false"; the map shows them either way.
   readonly property bool showScratchpads: String(Commons.Color.pick("fathom.show-scratchpads", "")).trim().toLowerCase() !== "false"
+  // With a single window the Alt chord does nothing unless the user opts in
+  // with `open-on-single = true`; then it opens the field for browsing.
+  readonly property bool openOnSingle: String(Commons.Color.pick("fathom.open-on-single", "")).trim().toLowerCase() === "true"
 
   function dimension(value, fallback) {
     const text = String(value).trim()
