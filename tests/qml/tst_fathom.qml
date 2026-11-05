@@ -238,6 +238,18 @@ TestCase {
     }
   }
 
+  function test_appearance_open_on_single_defaults_true() {
+    const fathom = createFathom()
+    const appearance = fathom.fieldView.appearance
+    verify(appearance.openOnSingle)
+    const cases = [["false", false], ["FALSE", false], [" false ", false], ["no", true], ["", true]]
+    for (let i = 0; i < cases.length; i++) {
+      Color.shellValues = ({ "fathom.open-on-single": cases[i][0] })
+      compare(appearance.openOnSingle, cases[i][1], JSON.stringify(cases[i][0]))
+      compare(fathom.openOnSingle, cases[i][1], JSON.stringify(cases[i][0]))
+    }
+  }
+
   function test_appearance_invalid_overrides_fall_back() {
     const fathom = createFathom()
     FakeSystem.ipc("fathom").open()
