@@ -10,6 +10,7 @@ QtObject {
   property var toplevels: ({ values: [] })
   property var monitors: ({ values: [] })
   property var activeToplevel: null
+  property var focusedWorkspace: null
   property var focusedMonitor: null
   property var dispatches: []
   property int refreshCount: 0

@@ -24,6 +24,18 @@ function focusRequest(address, usingLua) {
         : "focuswindow address:" + target;
 }
 
+// The only window, when it has the focus on the focused workspace, has nowhere
+// to go: Hyprland gives it the focus back when the overlay closes, and a request
+// would only warp the pointer to its middle. The workspace has to match because
+// Quickshell keeps its active toplevel on an empty workspace, and from there
+// the request is what takes you to the window.
+function needsFocusRequest(entry, activeAddress, focusedWorkspaceId, windowCount) {
+    var key = Recency.normalizeAddress(entry.address);
+    var there = !!key && key === Recency.normalizeAddress(activeAddress)
+        && entry.workspaceId === focusedWorkspaceId;
+    return !(windowCount === 1 && there);
+}
+
 // 1-based position of the window in its Hyprland group, 0 when ungrouped.
 function groupIndexFor(address, grouped) {
     var key = Recency.normalizeAddress(address);

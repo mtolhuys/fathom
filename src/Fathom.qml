@@ -577,8 +577,15 @@ Item {
     if (!root.opened) return false
     const entry = root.selectedEntry
     const closed = entry ? root.closed[entry.address] === true : true
+    const windowCount = root.field.length
     root.dismiss()
     if (!entry || closed) return false
+    const active = Hyprland.activeToplevel ? Hyprland.activeToplevel.address : ""
+    const focusedWorkspaceId = Hyprland.focusedWorkspace ? Number(Hyprland.focusedWorkspace.id) : NaN
+    if (!Focus.needsFocusRequest(entry, active, focusedWorkspaceId, windowCount)) {
+      root.pendingFocusAddress = ""
+      return true
+    }
     root.pendingFocusAddress = entry.address
     root.pendingGroupIndex = Focus.groupIndexFor(entry.address, entry.grouped)
     focusTimer.restart()

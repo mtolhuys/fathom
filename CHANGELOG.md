@@ -9,7 +9,8 @@
   Reported by lester2pastm (#12).
 - `open-on-single = true` in the `[fathom]` section of `shell.toml` makes the
   Alt chord open the field even when there is only one window, instead of
-  doing nothing. Off by default. By yurikilian (#13).
+  doing nothing. Off by default. By yurikilian (#13). Ending a switch on
+  that one window leaves the pointer where it is.
 
 ## 0.3.0 (2026-10-01)
 

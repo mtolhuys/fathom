@@ -214,6 +214,11 @@ Where the platform does not do what the spec expected:
   and write `Commons.Color` and `Commons.Style`, as Omarchy's shell does.
 - A Hyprland config reload starts a fresh Lua state but keeps the current
   submap, so `hypr/fathom.lua` leaves a `fathom` submap at load (#12).
+- Quickshell ignores an `activewindowv2` without an address, so on an empty
+  workspace `Hyprland.activeToplevel` still names the last window. Compare
+  its workspace with `Hyprland.focusedWorkspace` before trusting it.
+- `hl.dsp.focus` warps the pointer to the middle of the window, also when it
+  already has the focus.
 - `omakit verify` runs the marketplace baseline only when `origin` is a
   github.com remote.
 - `npx skills add mtolhuys/omakit` replaces the `~/.claude/skills` symlinks

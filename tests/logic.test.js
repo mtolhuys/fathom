@@ -639,3 +639,14 @@ test("a theme's pale muted color never becomes text", () => {
   assert.notEqual(palette.accentText, '#56949f');
   assert.equal(Palette.derive(themes['flexoki-light']).accentText, '#205ea6', 'an accent that reads stays as it is');
 });
+
+test('only the one window that already has the focus goes without a focus request', () => {
+  const entry = { address: 'a1', workspaceId: 1 };
+  assert.equal(Focus.needsFocusRequest(entry, '0xa1', 1, 1), false);
+  assert.equal(Focus.needsFocusRequest(entry, '0xa1', 2, 1), true, 'an empty workspace, with Quickshell still naming the window');
+  assert.equal(Focus.needsFocusRequest(entry, '0xa1', NaN, 1), true, 'no focused workspace known');
+  assert.equal(Focus.needsFocusRequest(entry, '', 1, 1), true, 'nothing has the focus');
+  assert.equal(Focus.needsFocusRequest(entry, null, 1, 1), true);
+  assert.equal(Focus.needsFocusRequest(entry, 'b2', 1, 1), true);
+  assert.equal(Focus.needsFocusRequest(entry, 'a1', 1, 2), true, 'with more windows nothing changes');
+});

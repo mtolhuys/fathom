@@ -223,6 +223,9 @@ named ones, then scratchpads.
 - Wheel notches step one window; touchpad pixels add up (60 px per window).
 - Hold mode needs at least two windows unless `open-on-single = true`; browse
   needs one.
+- Committing the only window while it has the focus sends no focus request:
+  Hyprland gives it the focus back, and a request would warp the pointer to
+  its middle. **(decision)**
 - Watchdog: in hold mode, 15 s without input (any key, the wheel, pointer
   movement) closes the field without focusing, in case an Alt release is ever
   missed.

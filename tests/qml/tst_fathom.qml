@@ -59,6 +59,7 @@ TestCase {
     Hyprland.usingLua = true
     Hyprland.toplevels = { values: values }
     Hyprland.activeToplevel = values[0]
+    Hyprland.focusedWorkspace = { id: 1 }
     Hyprland.focusedMonitor = { name: "eDP-1" }
     Hyprland.monitors = { values: [{ name: "eDP-1", activeWorkspace: { id: 1 } }] }
     Hyprland.dispatches = []
@@ -401,6 +402,22 @@ TestCase {
     compare(fathom.selectedIndex, 0)
     FakeSystem.press("fathom", "release")
     verify(!fathom.opened)
+    wait(250)
+    compare(Hyprland.dispatches, [], "no focus request, which would warp the pointer")
+  }
+
+  // From an empty workspace the one window is somewhere to go, even though
+  // Quickshell still names it as the active toplevel there.
+  function test_open_on_single_focuses_the_window_from_an_empty_workspace() {
+    setUpDesktop([toplevel("a1", 1, 0)])
+    Hyprland.focusedWorkspace = { id: 2 }
+    Commons.Color.shellValues = ({ "fathom.open-on-single": "true" })
+    const fathom = createFathom()
+    FakeSystem.press("fathom", "next")
+    verify(fathom.opened)
+    FakeSystem.press("fathom", "release")
+    verify(!fathom.opened)
+    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xa1" })'], 1000)
   }
 
   // Nothing to show is still nothing to show, and the setting applies live.
