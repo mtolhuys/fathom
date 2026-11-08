@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.2 (2026-11-08)
 
 - The window you switch to comes to the top, also when it floats. Focusing a
   floating window left it behind the others, as on Omarchy's floating
