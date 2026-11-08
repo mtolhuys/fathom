@@ -47,8 +47,8 @@ Fathom runs inside Maarten's working session. These hold without exception:
 ## Invariants
 
 - v1 is an overlay only. Never move, resize or close a real window. The focus
-  request (and the group tab activation before it) is the plugin's only
-  compositor write. The Lua snippet, which the user loads into their own
+  request (with the group tab activation before it and the raise after it,
+  #14) is the plugin's only compositor write. The Lua snippet, which the user loads into their own
   config, also switches Hyprland to the `fathom` submap while Alt is held and
   back when it is released, and adds one layer rule.
 - No network, no daemon, no root. The plugin writes no files and starts no

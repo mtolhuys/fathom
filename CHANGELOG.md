@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- The window you switch to comes to the top, also when it floats. Focusing a
+  floating window left it behind the others, as on Omarchy's floating
+  workspaces; Fathom now raises it right after the focus, the way Omarchy's
+  dock does. Reported by wrnlb666 (#14).
+
 ## 0.3.1 (2026-11-05)
 
 - A Hyprland config reload in the middle of a switch no longer leaves

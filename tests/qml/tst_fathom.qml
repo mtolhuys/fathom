@@ -75,6 +75,14 @@ TestCase {
     return fathom
   }
 
+  // What a switch to the window sends: the focus, then the raise (#14).
+  function switchedTo(key) {
+    return [
+      'hl.dsp.focus({ window = "address:0x' + key + '" })',
+      'hl.dsp.window.alter_zorder({ mode = "top", window = "address:0x' + key + '" })'
+    ]
+  }
+
   function lastDispatches() {
     return Hyprland.dispatches
   }
@@ -306,7 +314,7 @@ TestCase {
     compare(fathom.selectedIndex, 2)
     FakeSystem.press("fathom", "release")
     verify(!fathom.opened)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("c3"), 1000)
   }
 
   function test_wallpaper_loads_only_while_the_field_is_shown() {
@@ -350,7 +358,7 @@ TestCase {
     keyPress(Qt.Key_Tab)
     keyRelease(Qt.Key_Alt)
     verify(!fathom.opened)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xb2" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("b2"), 1000)
   }
 
   function test_escape_closes_without_focusing() {
@@ -370,7 +378,7 @@ TestCase {
     keyRelease(Qt.Key_Alt)
     FakeSystem.press("fathom", "release")
     wait(250)
-    compare(Hyprland.dispatches.length, 1)
+    compare(Hyprland.dispatches, switchedTo("b2"))
   }
 
   function test_hold_needs_two_windows() {
@@ -417,7 +425,7 @@ TestCase {
     verify(fathom.opened)
     FakeSystem.press("fathom", "release")
     verify(!fathom.opened)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xa1" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("a1"), 1000)
   }
 
   // Nothing to show is still nothing to show, and the setting applies live.
@@ -451,7 +459,7 @@ TestCase {
     keyPress(Qt.Key_Tab)
     keyPress(Qt.Key_Return)
     verify(!fathom.opened)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xb2" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("b2"), 1000)
   }
 
   function test_chord_step_arms_browse_mode() {
@@ -498,7 +506,7 @@ TestCase {
     Hyprland.usingLua = false
     FakeSystem.press("fathom", "next")
     FakeSystem.press("fathom", "release")
-    tryCompare(Hyprland, "dispatches", ["focuswindow address:0xb2"], 1000)
+    tryCompare(Hyprland, "dispatches", ["focuswindow address:0xb2", "alterzorder top,address:0xb2"], 1000)
   }
 
   function test_grouped_window_activates_its_tab_first() {
@@ -507,9 +515,8 @@ TestCase {
     FakeSystem.press("fathom", "next")
     FakeSystem.press("fathom", "release")
     tryCompare(Hyprland, "dispatches", [
-      'hl.dsp.group.active({ window = "address:0xb2", index = 2 })',
-      'hl.dsp.focus({ window = "address:0xb2" })'
-    ], 1000)
+      'hl.dsp.group.active({ window = "address:0xb2", index = 2 })'
+    ].concat(switchedTo("b2")), 1000)
   }
 
   function test_focus_events_reorder_the_field() {
@@ -581,7 +588,7 @@ TestCase {
     compare(findChild(fathom.fieldView, "counter").text, "2 / 2")
     keyRelease(Qt.Key_Alt)
     verify(!fathom.opened)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xe5" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("e5"), 1000)
 
     const current = toplevel("b2", -98, 0)
     current.workspace = { id: -98, name: "special:term" }
@@ -663,7 +670,7 @@ TestCase {
     // The sliver of the back plane that shows past the planes in front of it.
     mouseClick(back, back.width * 0.97, back.height / 2)
     tryVerify(function() { return !fathom.opened }, 1000)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("c3"), 1000)
   }
 
   function test_click_on_empty_space_cancels() {
@@ -749,7 +756,7 @@ TestCase {
     keyPress(Qt.Key_PageDown)
     compare(fathom.selectedIndex, 2)
     keyRelease(Qt.Key_Alt)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("c3"), 1000)
   }
 
   function test_left_right_and_digits_move_between_workspaces() {
@@ -808,7 +815,7 @@ TestCase {
     compare(fathom.filterText, "b")
     compare(fathom.selectedIndex, 1)
     FakeSystem.press("fathom", "release")
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xb2" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("b2"), 1000)
   }
 
   function test_release_with_nothing_matching_cancels() {
@@ -835,7 +842,7 @@ TestCase {
     compare(fathom.selectedIndex, 2)
     keyPress(Qt.Key_Return)
     verify(!fathom.opened)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("c3"), 1000)
   }
 
   function test_wheel_and_touchpad_dive() {
@@ -878,7 +885,7 @@ TestCase {
     Hyprland.toplevels = { values: [Hyprland.toplevels.values[0], Hyprland.toplevels.values[2]] }
     verify(fathom.opened)
     FakeSystem.press("fathom", "release")
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("c3"), 1000)
   }
 
   function test_no_focus_request_for_a_window_gone_before_it() {
@@ -900,7 +907,7 @@ TestCase {
     compare(fathom.fieldView.opacity, 0)
     FakeSystem.press("fathom", "release")
     verify(!fathom.revealed)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xb2" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("b2"), 1000)
     FakeSystem.press("fathom", "next")
     tryVerify(function() { return fathom.revealed }, 1000, "a held switch draws after the delay")
     FakeSystem.ipc("fathom").cancel()
@@ -923,7 +930,7 @@ TestCase {
     compare(fathom.selectedIndex, 2)
     mouseClick(tile, tile.width / 2, tile.height / 2)
     tryVerify(function() { return !fathom.opened }, 1000)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xc3" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("c3"), 1000)
   }
 
   function test_map_shows_every_workspace() {
@@ -949,9 +956,9 @@ TestCase {
     Hyprland.rawEvent({ name: "activewindowv2", data: "" })
     compare(Hyprland.dispatches.length, 0)
     Hyprland.rawEvent({ name: "activewindowv2", data: "a1" })
-    compare(Hyprland.dispatches, ['hl.dsp.focus({ window = "address:0xb2" })'], "right on the restore")
+    compare(Hyprland.dispatches, switchedTo("b2"), "right on the restore")
     wait(250)
-    compare(Hyprland.dispatches.length, 1, "and only once")
+    compare(Hyprland.dispatches.length, 2, "and only once")
   }
 
   function test_caption_click_focuses_and_the_filter_pill_is_not_empty_space() {
@@ -968,7 +975,7 @@ TestCase {
     const captionY = view.height - view.margin - view.mapHeight - view.captionHeight / 2 - 14 * view.unit
     mouseClick(view, view.stage.frontX - view.stage.frontWidth / 2 + 60, captionY)
     tryVerify(function() { return !fathom.opened }, 1000)
-    tryCompare(Hyprland, "dispatches", ['hl.dsp.focus({ window = "address:0xb2" })'], 1000)
+    tryCompare(Hyprland, "dispatches", switchedTo("b2"), 1000)
   }
 
   function test_a_window_that_stops_delivering_frames_shows_its_last_snapshot() {

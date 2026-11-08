@@ -779,6 +779,8 @@ Item {
     if (group) Hyprland.dispatch(group)
     const request = Focus.focusRequest(address, usingLua)
     if (request) Hyprland.dispatch(request)
+    const raise = Focus.raiseRequest(address, usingLua)
+    if (raise) Hyprland.dispatch(raise)
   }
 
   Timer {

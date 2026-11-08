@@ -173,6 +173,13 @@ test('focus requests use hl.dsp under Lua and focuswindow under hyprlang', () =>
   assert.equal(Focus.focusRequest('', true), '');
 });
 
+test('the selection is raised by address after the focus (#14)', () => {
+  assert.equal(Focus.raiseRequest('55d1a2', true), 'hl.dsp.window.alter_zorder({ mode = "top", window = "address:0x55d1a2" })');
+  assert.equal(Focus.raiseRequest('0x55D1A2', false), 'alterzorder top,address:0x55d1a2');
+  assert.equal(Focus.raiseRequest('"); os.execute("x', true), '');
+  assert.equal(Focus.raiseRequest('', false), '');
+});
+
 test('grouped windows activate their tab before focusing', () => {
   assert.equal(Focus.groupIndexFor('0xb2', ['0xa1', '0xb2']), 2);
   assert.equal(Focus.groupIndexFor('b2', []), 0);

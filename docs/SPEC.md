@@ -290,6 +290,13 @@ layer rule sits in a `pcall`.
   another workspace switches to it.
 - A window in a Hyprland group has its tab activated first
   (`hl.dsp.group.active`), because `hl.dsp.focus` ignores hidden group tabs.
+- The window is raised right after the focus
+  (`hl.dsp.window.alter_zorder({ mode = "top", window = "address:0x..." })`,
+  `alterzorder top,address:0x...` under hyprlang), because focusing a
+  floating window does not bring it to the top, as on Omarchy's floating
+  workspaces (#14). It names the address, not the active window, so it does
+  not depend on the focus having landed; Omarchy's dock raises the same way.
+  Tiled windows do not overlap, so for them it changes nothing on screen.
 - The request waits until the overlay's keyboard grab is gone: releasing it
   makes Hyprland restore focus to the previous window, which would undo an
   earlier request. Hyprland announces the restore (`activewindowv2` with the
@@ -327,7 +334,7 @@ pointer. To confirm.
 ## Safety **(kickstart)**
 
 - Never move, resize or close real windows in v1. The focus request (plus the
-  group tab activation) is the only write to windows. The Lua snippet also
+  group tab activation and the raise) is the only write to windows. The Lua snippet also
   switches Hyprland's submap while Alt is held, and adds one layer rule.
 - No network, no daemon, no root. The plugin writes no files and starts no
   programs (`tests/static.test.sh` holds that line). The only window content

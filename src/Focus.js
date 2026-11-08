@@ -2,8 +2,8 @@
 .import "Recency.js" as Recency
 
 // Hyprland dispatch requests for focusing the selection. Fathom never moves,
-// resizes or closes a window; these two requests are the only compositor
-// writes it makes.
+// resizes or closes a window; these requests (the group tab, the focus and the
+// raise) are the only compositor writes it makes.
 //
 // Omarchy Quattro runs Hyprland with a Lua config, where dispatchers are Lua
 // expressions (hl.dsp.*). Under a hyprlang config the classic dispatcher
@@ -22,6 +22,19 @@ function focusRequest(address, usingLua) {
     return usingLua
         ? 'hl.dsp.focus({ window = "address:' + target + '" })'
         : "focuswindow address:" + target;
+}
+
+// A focused floating window is not raised by the focus alone (Omarchy's
+// floating workspaces, #14), so the selection is brought to the top of its
+// workspace's stack too. The address is named rather than the active window,
+// in case the focus has not landed yet. Tiled windows never overlap, so for
+// them the raise changes nothing on screen.
+function raiseRequest(address, usingLua) {
+    var target = dispatchAddress(address);
+    if (!target) return "";
+    return usingLua
+        ? 'hl.dsp.window.alter_zorder({ mode = "top", window = "address:' + target + '" })'
+        : "alterzorder top,address:" + target;
 }
 
 // The only window, when it has the focus on the focused workspace, has nowhere
