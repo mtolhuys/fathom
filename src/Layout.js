@@ -24,7 +24,7 @@ var VISIBLE_STEPS = 5;      // cards further back fade out; the map shows them
 // same object reference each time keeps the QML var change signal quiet, so
 // the dependent bindings of those planes stop re-evaluating.
 var OFFSCREEN_GEOMETRY = { x: 0, y: 0, width: 1, height: 1, scale: 0, opacity: 0, z: 0 };
-var LIVE_STEPS = 2.5;       // live capture reaches this many steps behind the camera; deeper cards show their snapshot (docs/PERFORMANCE-PLAN.md PERF4)
+var LIVE_STEPS = 2.5;       // live capture reaches this many steps behind the camera; deeper cards show their snapshot
 
 function clamp(value, low, high) {
     return Math.max(low, Math.min(high, value));

@@ -30,7 +30,7 @@ Item {
   property real textUnit: unit
 
   readonly property var toplevel: entry ? entry.toplevel : null
-  readonly property int slot: controller && index < controller.slots.length ? controller.slots[index] : -1
+  readonly property int slot: controller && index >= 0 && index < controller.slots.length ? controller.slots[index] : -1
   readonly property bool inField: slot >= 0
   readonly property real r: inField && controller ? slot - controller.cameraSlot : 0
   readonly property bool selected: controller !== null && index === controller.selectedIndex
