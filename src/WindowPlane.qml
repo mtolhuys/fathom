@@ -41,7 +41,7 @@ Item {
   // Captures run only for cards near the camera; the rest of the field is
   // on the map, and capturing it would cost the compositor for nothing.
   readonly property bool capturing: controller !== null && controller.opened && inField
-    && r > -1.2 && r < Layout.LIVE_STEPS && !!toplevel && !!toplevel.wayland
+    && r > -1.2 && r < Layout.VISIBLE_STEPS + 0.5 && !!toplevel && !!toplevel.wayland
 
   // The window's own shape, for fitting it into the card: the frame's size
   // once one arrived, else Hyprland's reported size, else 16:10.
