@@ -34,7 +34,7 @@ Item {
       const viewport = info[group.monitor] || (names.length ? info[names[0]] : { x: 0, y: 0, width: 1920, height: 1080 })
       const windows = []
       for (let j = 0; j < group.entries.length; j++) {
-        const geometry = controller.geometryOf(controller.field[group.entries[j]])
+        const geometry = controller.geometries[group.entries[j]]
         if (geometry) windows.push(geometry)
       }
       const bounds = Layout.minimapBounds(viewport, windows)

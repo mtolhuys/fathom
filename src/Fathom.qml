@@ -211,6 +211,14 @@ Item {
     return entry ? entry.geometry : null
   }
 
+  // One geometry read per window per refresh, shared by the map and the
+  // planes; each reader binds to this array instead of calling geometryOf.
+  readonly property var geometries: {
+    const list = []
+    for (let i = 0; i < root.field.length; i++) list.push(root.geometryOf(root.field[i]))
+    return list
+  }
+
   // Logical geometry of every monitor, for the map's minimaps.
   function collectMonitors() {
     const info = {}

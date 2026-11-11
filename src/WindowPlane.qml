@@ -41,7 +41,7 @@ Item {
   // Captures run only for cards near the camera; the rest of the field is
   // on the map, and capturing it would cost the compositor for nothing.
   readonly property bool capturing: controller !== null && controller.opened && inField
-    && r > -1.2 && r < Layout.VISIBLE_STEPS + 0.5 && !!toplevel && !!toplevel.wayland
+    && r > -1.2 && r < Layout.LIVE_STEPS && !!toplevel && !!toplevel.wayland
 
   // The window's own shape, for fitting it into the card: the frame's size
   // once one arrived, else Hyprland's reported size, else 16:10.
@@ -54,7 +54,18 @@ Item {
     return 1.6
   }
 
-  readonly property var geometry: stage ? Layout.deepPlane(stage, r) : ({ x: 0, y: 0, width: 1, height: 1, scale: 1, opacity: 0, z: 0 })
+  // Outside the visible band [-1.5, Layout.VISIBLE_STEPS + 1] the shared
+  // offscreen shape replaces Layout.deepPlane, with no object allocated in
+  // any branch. The swap is invisible because deepPlane's opacity is exactly
+  // 0 at both band edges: the passed branch fades out within PASSED_FADE =
+  // 0.6, so opacity is 0 at r = -1.5, and the deep branch's opacity =
+  // clamp(VISIBLE_STEPS + 1 - r) hits 0 at r = VISIBLE_STEPS + 1. Planes out
+  // of band stop driving their x/y/width/height/z/opacity/pad/radius/fog
+  // bindings every animation frame, and since the same object reference
+  // comes back each time, the var change signal stays quiet.
+  readonly property var geometry: !stage || r < -1.5 || r > Layout.VISIBLE_STEPS + 1
+    ? Layout.OFFSCREEN_GEOMETRY
+    : Layout.deepPlane(stage, r)
   readonly property real depthScale: Math.min(1, geometry.scale)
   readonly property real headerHeight: Math.max(18 * textUnit, Math.min(30 * textUnit, height * 0.1))
   readonly property real pad: Math.max(3, 8 * unit * depthScale)
@@ -68,7 +79,7 @@ Item {
   // Outside its monitor's area (a scrolling layout parked it beside the
   // screen): Hyprland does not render it, so no live frame will come.
   readonly property bool parked: controller !== null && entry !== null
-    && Layout.outside(controller.geometryOf(entry), controller.monitorInfo[entry.monitorName])
+    && Layout.outside(controller.geometries[index], controller.monitorInfo[entry.monitorName])
   // The last frame seen of this window while the field was open, if any.
   readonly property var snapshot: controller && entry ? (controller.snapshots[entry.address] || null) : null
   readonly property bool showsSnapshot: !capture.hasContent && snapshot !== null
