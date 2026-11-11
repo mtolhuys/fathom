@@ -10,7 +10,7 @@ really are.
 
 v1 is an overlay only: no real window moves.
 
-Status: 0.3.2. Phase 0 (0.1.0) proved the mechanics; Phase 1 (0.2.0) is the
+Status: 0.3.3. Phase 0 (0.1.0) proved the mechanics; Phase 1 (0.2.0) is the
 product: the card layout, the sounding line, the workspace map, fog,
 background blur, last-seen snapshots, the wheel, arrows and the filter. Mouse
 parallax is still open. [CHANGELOG.md](../CHANGELOG.md) has every release.

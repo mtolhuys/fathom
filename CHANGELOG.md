@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.3 (2026-11-11)
 
 - Switching does less work. The cards are kept between openings and
   reused instead of being built again for every switch, cards outside the
