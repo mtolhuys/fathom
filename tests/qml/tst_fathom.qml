@@ -1191,4 +1191,41 @@ TestCase {
     verify(FakeSystem.iconRequests.every(function(name) { return name.indexOf("/") === -1 }),
       "no path reached the icon theme: " + JSON.stringify(FakeSystem.iconRequests))
   }
+
+  // The planes' model mirrors the field in a ListModel whose rows update in
+  // place, so reopening with the same windows keeps the delegates it has
+  // instead of destroying and rebuilding every card.
+  function test_planes_survive_close_and_are_reused() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    const first = fathom.fieldView.planeAt(0)
+    verify(first !== null)
+    FakeSystem.ipc("fathom").cancel()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    verify(fathom.fieldView.planeAt(0) === first, "the first opening's delegate is reused")
+    compare(fathom.fieldView.planeAt(0).entry.address, "a1")
+    compare(first.entry.address, "a1", "the kept delegate now shows the fresh entry")
+  }
+
+  // Reopening with fewer windows trims the rows to the new field, and each
+  // row follows its window; while closed the kept delegates stay hidden with
+  // their captures off.
+  function test_plane_rows_follow_the_field_on_reopen() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    FakeSystem.ipc("fathom").cancel()
+    const kept = fathom.fieldView.planeAt(0)
+    verify(kept !== null, "the delegate survives the close")
+    compare(kept.capturing, false, "a closed field captures nothing")
+    tryVerify(function() { return !kept.visible }, 1000, "the kept delegate stays hidden while closed")
+    Hyprland.toplevels = { values: [toplevel("a1", 1, 0), toplevel("b2", 1, 1)] }
+    Hyprland.activeToplevel = Hyprland.toplevels.values[0]
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 2)
+    compare(fathom.fieldView.planeAt(0).entry.address, "a1")
+    compare(fathom.fieldView.planeAt(1).entry.address, "b2")
+  }
 }

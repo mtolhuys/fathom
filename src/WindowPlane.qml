@@ -17,8 +17,9 @@ import "Field.js" as Field
 Item {
   id: card
 
-  required property var modelData
+  // The ListModel row's own roles: entry is the field entry, index the row.
   required property int index
+  required property var entry
 
   // Set by FieldView.
   property var controller: null
@@ -28,7 +29,6 @@ Item {
   property real unit: 1
   property real textUnit: unit
 
-  readonly property var entry: modelData
   readonly property var toplevel: entry ? entry.toplevel : null
   readonly property int slot: controller && index < controller.slots.length ? controller.slots[index] : -1
   readonly property bool inField: slot >= 0
