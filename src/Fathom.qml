@@ -61,7 +61,9 @@ Item {
   // A mirror of the field for the view's Repeater, as a ListModel: rows are
   // updated in place (syncPlaneModel), so the plane delegates survive a
   // close and are reused at the next opening instead of being destroyed and
-  // rebuilt. The field itself stays the source of truth.
+  // rebuilt. A row holds only its window's address; a plane reads its entry
+  // from the field by index. (A ListModel copies an object role into a
+  // variant map, with the toplevel as a pointer no QML guard follows.)
   readonly property ListModel planeModel: ListModel {}
   property var closed: ({})
   property string filterText: ""
@@ -405,16 +407,15 @@ Item {
   }
 
   // Brings the Repeater's mirror of the field up to date row by row: a row
-  // whose address is unchanged keeps its place (only its entry is set), so
-  // the view keeps the delegate it already has.
+  // whose address is unchanged is left alone, so the view keeps the delegate
+  // it already has.
   function syncPlaneModel(entries) {
     const list = entries || []
     while (root.planeModel.count > list.length) root.planeModel.remove(root.planeModel.count - 1)
     for (let i = 0; i < list.length; i++) {
-      const row = i < root.planeModel.count ? root.planeModel.get(i) : null
-      if (row && row.address === list[i].address) root.planeModel.set(i, { entry: list[i] })
-      else if (row) root.planeModel.set(i, { address: list[i].address, entry: list[i] })
-      else root.planeModel.append({ address: list[i].address, entry: list[i] })
+      const address = String(list[i].address)
+      if (i >= root.planeModel.count) root.planeModel.append({ address: address })
+      else if (root.planeModel.get(i).address !== address) root.planeModel.setProperty(i, "address", address)
     }
   }
 

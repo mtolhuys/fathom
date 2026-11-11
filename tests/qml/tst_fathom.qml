@@ -1206,7 +1206,7 @@ TestCase {
     tryCompare(fathom.fieldView, "planeCount", 3)
     verify(fathom.fieldView.planeAt(0) === first, "the first opening's delegate is reused")
     compare(fathom.fieldView.planeAt(0).entry.address, "a1")
-    compare(first.entry.address, "a1", "the kept delegate now shows the fresh entry")
+    verify(first.entry === fathom.field[0], "the kept delegate shows the fresh entry itself, not a copy")
   }
 
   // Reopening with fewer windows trims the rows to the new field, and each
