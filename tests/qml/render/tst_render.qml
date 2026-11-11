@@ -11,7 +11,7 @@ import QtQuick
 import QtTest
 import FathomTest
 import Quickshell.Hyprland
-import qs.Commons
+import qs.Commons as Commons
 import "../src"
 
 TestCase {
@@ -94,10 +94,10 @@ TestCase {
 
   function useTheme(name, backdrop) {
     const colors = testCase.themes[name]
-    Color.foreground = colors[0]
-    Color.background = colors[1]
-    Color.accent = colors[2]
-    Color.urgent = colors[3]
+    Commons.Color.foreground = colors[0]
+    Commons.Color.background = colors[1]
+    Commons.Color.accent = colors[2]
+    Commons.Color.urgent = colors[3]
     const light = name !== "default" && ["rose-pine", "catppuccin-latte", "flexoki-light", "white"].indexOf(name) !== -1
     testCase.lightApps = light
     testCase.backdrop = backdrop || (light ? "light" : "dark")
@@ -215,9 +215,9 @@ TestCase {
 
   function init() {
     useTheme("default")
-    Color.shellValues = ({})
-    Style.cornerRadius = 7
-    Style.normalBorderWidth = 1
+    Commons.Color.shellValues = ({})
+    Commons.Style.cornerRadius = 7
+    Commons.Style.normalBorderWidth = 1
   }
 
   function initTestCase() {
@@ -243,13 +243,13 @@ TestCase {
   // The scene of 02-ten-windows with Omarchy's default square corners (as a
   // [fathom] override, with a heavier border), and with a rounded theme.
   function test_square_appearance() {
-    Color.shellValues = ({ "fathom.corner-radius": "0", "fathom.border-width": "2" })
+    Commons.Color.shellValues = ({ "fathom.corner-radius": "0", "fathom.border-width": "2" })
     const fathom = open(10, 1600, 1000, "hold")
     render("square-appearance", fathom)
   }
 
   function test_rounded_appearance() {
-    Style.cornerRadius = 12
+    Commons.Style.cornerRadius = 12
     const fathom = open(10, 1600, 1000, "hold")
     render("rounded-appearance", fathom)
   }
@@ -257,7 +257,7 @@ TestCase {
   // The scene of 03-fifteen-deep with the scratchpad left out of the Deep; the
   // map still shows it. The header and the counter both leave it out.
   function test_scratchpads_hidden() {
-    Color.shellValues = ({ "fathom.show-scratchpads": "false" })
+    Commons.Color.shellValues = ({ "fathom.show-scratchpads": "false" })
     const fathom = open(15, 1600, 1000, "hold")
     for (let i = 0; i < 4; i++) FakeSystem.press("fathom", "next")
     compare(findChild(fathom.fieldView, "summary").text, "14 windows  ·  7 workspaces")
