@@ -126,8 +126,9 @@ whatever the windows' own shapes are.
 - Passed cards grow and slide out to the lower left, fading within 0.6
   steps.
 - The camera animates between cards in 220 ms (OutCubic).
-- Captures run only for cards near the camera (from one step passed to the
-  last visible card) and only while the field is open.
+- Captures run only for cards near the camera (from one step passed to
+  two and a half steps behind it, `LIVE_STEPS` in src/Layout.js) and only
+  while the field is open; deeper cards show their snapshot.
 - Hyprland renders a window for capture only while it lies within its
   monitor's area, so windows a scrolling layout parks beside the screen never
   deliver a frame (seen on the device; not a matter of minimizing, which
@@ -316,11 +317,12 @@ pointer. To confirm.
 ## Performance **(kickstart)**
 
 - 60 fps target on integrated graphics.
-- Captures exist only while the field is open, and only for cards near the
-  camera; the map reuses the cards' snapshots (the same image and texture),
-  never a capture of its own. Snapshots are grabbed at most once per window
-  per 30 s, including the card one step behind the camera (the window you
-  were on), which is captured anyway so stepping back is instant.
+- Captures exist only while the field is open, and only for cards up to
+  two and a half steps behind the camera; the map reuses the cards'
+  snapshots (the same image and texture), never a capture of its own.
+  Snapshots are grabbed at most once per window per 30 s, including the
+  card one step behind the camera (the window you were on), which is
+  captured anyway so stepping back is instant.
 - App icons load only while shown. So does the wallpaper: it is decoded when
   the field is drawn (never for a quick Alt+Tab), at the screen's size,
   never cached so a new wallpaper shows at the next opening, and dropped
