@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Only the card just passed, the selection and the two cards behind it stay live; deeper cards show their last snapshot instead.
+- Cards outside the visible band stop driving their bindings while the camera animates.
+- The map and the cards read one geometry array per client-list refresh instead of three separate passes.
+- Plane delegates survive between openings and update in place instead of being rebuilt for every switch.
+
 ## 0.3.2 (2026-11-08)
 
 - The window you switch to comes to the top, also when it floats. Focusing a

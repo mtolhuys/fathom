@@ -38,13 +38,10 @@ Item {
     for (const name in info) return info[name]
     return { x: 0, y: 0, width: 1920, height: 1080 }
   }
-  // Positions follow Hyprland's latest client list (see geometryOf).
+  // Positions follow Hyprland's latest client list (see Fathom.qml's geometries).
   readonly property var windows: {
     const list = []
-    for (let i = 0; i < group.entries.length; i++) {
-      const entry = controller ? controller.field[group.entries[i]] : null
-      list.push(controller ? controller.geometryOf(entry) : null)
-    }
+    for (let i = 0; i < group.entries.length; i++) list.push(controller.geometries[group.entries[i]])
     return list
   }
   readonly property var items: Layout.minimapItems(viewport, windows, box.width, box.height)

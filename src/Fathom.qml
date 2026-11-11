@@ -58,6 +58,11 @@ Item {
   // The field is frozen while open: entries keep their index. What is shown
   // is `order`, the entry indices that are neither closed nor filtered out.
   property var field: []
+  // A mirror of the field for the view's Repeater, as a ListModel: rows are
+  // updated in place (syncPlaneModel), so the plane delegates survive a
+  // close and are reused at the next opening instead of being destroyed and
+  // rebuilt. The field itself stays the source of truth.
+  readonly property ListModel planeModel: ListModel {}
   property var closed: ({})
   property string filterText: ""
   property var order: []
@@ -209,6 +214,14 @@ Item {
     if (at && size && at.length >= 2 && size.length >= 2)
       return { x: Number(at[0]), y: Number(at[1]), width: Number(size[0]), height: Number(size[1]) }
     return entry ? entry.geometry : null
+  }
+
+  // One geometry read per window per refresh, shared by the map and the
+  // planes; each reader binds to this array instead of calling geometryOf.
+  readonly property var geometries: {
+    const list = []
+    for (let i = 0; i < root.field.length; i++) list.push(root.geometryOf(root.field[i]))
+    return list
   }
 
   // Logical geometry of every monitor, for the map's minimaps.
@@ -391,6 +404,20 @@ Item {
     return true
   }
 
+  // Brings the Repeater's mirror of the field up to date row by row: a row
+  // whose address is unchanged keeps its place (only its entry is set), so
+  // the view keeps the delegate it already has.
+  function syncPlaneModel(entries) {
+    const list = entries || []
+    while (root.planeModel.count > list.length) root.planeModel.remove(root.planeModel.count - 1)
+    for (let i = 0; i < list.length; i++) {
+      const row = i < root.planeModel.count ? root.planeModel.get(i) : null
+      if (row && row.address === list[i].address) root.planeModel.set(i, { entry: list[i] })
+      else if (row) root.planeModel.set(i, { address: list[i].address, entry: list[i] })
+      else root.planeModel.append({ address: list[i].address, entry: list[i] })
+    }
+  }
+
   function showField(entries, nextMode, step, now) {
     root.cameraAnimated = false
     root.targetScreen = root.screenForFocusedMonitor()
@@ -401,6 +428,7 @@ Item {
     root.wheelCarryX = 0
     root.wheelCarryY = 0
     root.field = entries
+    root.syncPlaneModel(entries)
     root.monitorInfo = root.collectMonitors()
     root.groups = Field.workspaceGroups(entries, root.visibleWorkspaces(), root.visibleWorkspaceIds())
     root.order = Field.visibleOrder(entries, root.closed, "", root.showScratchpads)

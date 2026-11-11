@@ -9,6 +9,8 @@
 # When the installed hypr/fathom.lua changed, or Alt+Tab is not Fathom's yet,
 # it hands over to bin/load-bindings, the one script that writes to the
 # running Hyprland, with checks before and after.
+# When the shell still answers with the previous build, it is restarted once
+# (`omarchy restart shell`), so the new build is the one that loads.
 
 set -euo pipefail
 
@@ -44,6 +46,22 @@ wait_for_plugin_state() {
     if [[ $expected == absent ]] && ! plugin_known; then return 0; fi
     if (( attempt % 20 == 0 )); then
       omarchy-shell shell rescanPlugins >/dev/null || true
+    fi
+    sleep 0.1
+  done
+  return 1
+}
+
+# The shell can keep the object that answers IPC from before a plugin change,
+# so the identity may stay old until the shell restarts. Waits for up to the
+# given number of 0.1 s attempts for the installed build to answer.
+wait_for_identity() {
+  local attempts="$1"
+  local attempt
+  for (( attempt = 0; attempt < attempts; attempt++ )); do
+    if omarchy-shell fathom state 2>/dev/null \
+        | jq -e --arg expected "$expected_identity" '.buildIdentity == $expected' >/dev/null; then
+      return 0
     fi
     sleep 0.1
   done
@@ -117,15 +135,13 @@ omarchy plugin enable "$plugin_id"
   || fail "the installed commit does not match the development snapshot"
 
 loaded=false
-for _ in {1..100}; do
-  if omarchy-shell fathom state 2>/dev/null \
-      | jq -e --arg expected "$expected_identity" '.buildIdentity == $expected' >/dev/null; then
-    loaded=true
-    break
-  fi
-  sleep 0.1
-done
-[[ $loaded == true ]] || fail "installed and enabled, but build $expected_identity did not answer on IPC"
+wait_for_identity 100 && loaded=true
+if [[ $loaded == false ]]; then
+  printf 'Build %s did not answer yet: restarting the Omarchy shell to load it.\n' "$expected_identity"
+  omarchy restart shell
+  wait_for_identity 300 && loaded=true
+fi
+[[ $loaded == true ]] || fail "installed and enabled, but build $expected_identity did not answer on IPC even after a shell restart"
 
 printf 'Fathom %s is installed, enabled and loaded.\n' "$expected_identity"
 

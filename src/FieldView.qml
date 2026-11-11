@@ -185,7 +185,9 @@ Item {
     Repeater {
       id: planes
 
-      model: view.controller ? view.controller.field : []
+      // The controller's planeModel mirrors its field and updates rows in
+      // place, so the delegates survive a close and are reused on reopen.
+      model: view.controller ? view.controller.planeModel : null
 
       delegate: WindowPlane {
         controller: view.controller
