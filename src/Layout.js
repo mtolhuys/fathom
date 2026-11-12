@@ -51,6 +51,18 @@ function fit(boxWidth, boxHeight, aspect) {
     };
 }
 
+// The card of a window that takes its window's shape (card-fit = "window"):
+// the preview fitted into the room a box of boxWidth x boxHeight leaves under
+// the header and inside the padding, and the card drawn closely around it.
+// The card keeps its box's top-right corner, the corner the stack steps by,
+// so every card still shows its header above the card in front of it.
+function fittedCard(boxWidth, boxHeight, header, pad, aspect) {
+    var room = fit(Math.max(1, boxWidth - pad * 2), Math.max(1, boxHeight - header - pad), aspect);
+    var width = Math.min(boxWidth, room.width + pad * 2);
+    var height = Math.min(boxHeight, room.height + header + pad);
+    return { x: boxWidth - width, y: 0, width: width, height: height };
+}
+
 // The front box for a screen of width x height, between `top` and
 // `height - bottom` and right of `left`, for cards of `aspect`. The whole
 // stack (front card plus the cards behind it) is centered in that area.

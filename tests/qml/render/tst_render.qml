@@ -254,6 +254,28 @@ TestCase {
     render("rounded-appearance", fathom)
   }
 
+  // #16: cards that follow their windows' shapes, as they are and stripped
+  // down (no padding, the surface behind the header only).
+  function test_compact_cards() {
+    Commons.Color.shellValues = ({ "fathom.card-fit": "window" })
+    const fathom = open(15, 1600, 1000, "hold")
+    render("compact-cards", fathom)
+  }
+
+  function test_compact_cards_bare() {
+    Commons.Color.shellValues = ({ "fathom.card-fit": "window", "fathom.card-padding": "0", "fathom.card-background": "false" })
+    const fathom = open(15, 1600, 1000, "hold")
+    render("compact-cards-bare", fathom)
+  }
+
+  function test_compact_cards_bare_light() {
+    useTheme("rose-pine")
+    Commons.Color.shellValues = ({ "fathom.card-fit": "window", "fathom.card-padding": "0", "fathom.card-background": "false" })
+    const fathom = open(15, 1600, 1000, "hold")
+    FakeSystem.press("fathom", "next")
+    render("compact-cards-bare-light", fathom)
+  }
+
   // The scene of 03-fifteen-deep with the scratchpad left out of the Deep; the
   // map still shows it. The header and the counter both leave it out.
   function test_scratchpads_hidden() {

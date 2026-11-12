@@ -222,6 +222,9 @@ corner-radius = 0
 border-width = 2
 show-scratchpads = false
 open-on-single = true
+card-fit = "window"
+card-padding = 0
+card-background = false
 ```
 
 | Key | Default | Description |
@@ -230,14 +233,22 @@ open-on-single = true
 | `border-width` | the shell's `[controls]` border width | Idle borders, in pixels. |
 | `show-scratchpads` | `true` | When `false`, windows on special workspaces (scratchpads) drop out of the visible depth stack while staying visible on the workspace map. |
 | `open-on-single` | `false` | When `true`, the Alt chord opens the field even with a single window instead of doing nothing. |
+| `card-fit` | `"screen"` | When `"window"`, each card takes its window's own shape instead of the monitor's, so a narrow window (a column of a scrolling layout) gets a narrow card. |
+| `card-padding` | follows the screen's size | The space between the card's edge and its preview, in pixels on the front card. |
+| `card-background` | `true` | When `false`, only the header strip keeps the card's surface and the preview stands free. |
 
-Both sizes are nonnegative pixels; zero is supported. Omit a key to follow
+The sizes are nonnegative pixels; zero is supported. Omit a key to follow
 the shell again: `corner-radius` falls back to Hyprland's rounding,
 `border-width` to the shell's `[controls]` border width (not Hyprland's
 `border_size`). Empty, negative or nonnumeric values fall back the same way.
 Only `false` (in any case) hides scratchpads; any other value keeps them.
 Only `true` (in any case) turns `open-on-single` on; any other value leaves
 it off.
+Only `window` (in any case) fits cards to their windows, and only `false`
+takes the surface from behind the preview. A fitted card keeps the top-right
+corner the stack steps by, the header (icon, title, age) and the selection's
+ring; `card-padding` shrinks with depth like the card and falls back to
+Fathom's own when it is empty, negative or nonnumeric.
 Omarchy watches this user file and layers it over the current theme, so these
 preferences update live, even while the overlay is open, and survive theme
 changes and plugin updates. Themes may also provide the same `[fathom]`

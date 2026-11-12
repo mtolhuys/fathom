@@ -39,13 +39,13 @@ TestCase {
       wayland: extra.noHandle ? null : {
         appId: "foot",
         contentReady: extra.contentReady !== false,
-        width: 1600,
-        height: 1000
+        width: extra.size ? extra.size[0] : 1600,
+        height: extra.size ? extra.size[1] : 1000
       },
       lastIpcObject: {
         mapped: extra.mapped !== false,
         focusHistoryID: history,
-        size: [1600, 1000],
+        size: extra.size || [1600, 1000],
         grouped: extra.grouped || []
       }
     }
@@ -257,6 +257,104 @@ TestCase {
       Commons.Color.shellValues = ({ "fathom.open-on-single": cases[i][0] })
       compare(appearance.openOnSingle, cases[i][1], JSON.stringify(cases[i][0]))
       compare(fathom.openOnSingle, cases[i][1], JSON.stringify(cases[i][0]))
+    }
+  }
+
+  // #16. Without a value every card keeps the monitor's shape, whatever its
+  // window's; "window" (in any case) draws the card closely around the
+  // window, on the top-right corner the stack steps by.
+  function test_appearance_card_fit_follows_the_window_only_on_window() {
+    setUpDesktop([toplevel("a1", 1, 0, { size: [640, 1000] }), toplevel("b2", 1, 1), toplevel("c3", 2, 2)])
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    fathom.select(0)
+    const view = fathom.fieldView
+    const plane = view.planeAt(0)
+    tryVerify(function() { return plane.selected && Math.abs(plane.r) < 0.001 }, 2000)
+    const stage = view.stage
+    const right = stage.frontX + stage.frontWidth / 2
+    const top = stage.frontY - stage.frontHeight / 2
+    const cases = [["", false], ["screen", false], ["window", true], [" WINDOW ", true], ["true", false]]
+    for (let i = 0; i < cases.length; i++) {
+      Commons.Color.shellValues = ({ "fathom.card-fit": cases[i][0] })
+      compare(view.appearance.cardFitsWindow, cases[i][1], JSON.stringify(cases[i][0]))
+      fuzzyCompare(plane.x + plane.width, right, 0.01)
+      fuzzyCompare(plane.y, top, 0.01)
+      const frame = findChild(plane, "previewFrame")
+      fuzzyCompare(frame.width / frame.height, 0.64, 0.01)
+      if (!cases[i][1]) {
+        fuzzyCompare(plane.width, stage.frontWidth, 0.01)
+        fuzzyCompare(plane.height, stage.frontHeight, 0.01)
+        continue
+      }
+      fuzzyCompare(plane.height, stage.frontHeight, 0.01)
+      fuzzyCompare(plane.width, frame.width + plane.pad * 2, 0.01)
+      verify(plane.width < stage.frontWidth / 2, "the card is as narrow as its window")
+      // The selection's ring and the click area follow the card.
+      const ring = findChild(plane, "selectionOutline")
+      fuzzyCompare(ring.width, plane.width + 6 * plane.unit, 0.01)
+    }
+    // A window of the monitor's shape fills its box either way.
+    Commons.Color.shellValues = ({ "fathom.card-fit": "window" })
+    const full = view.planeAt(1)
+    verify(full.inField && full.r > 0)
+    const box = Layout.deepPlane(stage, full.r)
+    verify(full.width <= box.width + 0.01 && full.height <= box.height + 0.01)
+    fuzzyCompare(full.x + full.width, box.x + box.width / 2, 0.01)
+  }
+
+  // Pixels on the front card, zero included; shrinking with depth like the
+  // card. No value, or an invalid one, keeps Fathom's own padding.
+  function test_appearance_card_padding_replaces_fathoms_own() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    const view = fathom.fieldView
+    const front = view.planeAt(fathom.selectedIndex)
+    let behind = null
+    for (let i = 0; i < view.planeCount; i++) {
+      const plane = view.planeAt(i)
+      if (plane.inField && plane.r > 0 && (behind === null || plane.r < behind.r)) behind = plane
+    }
+    verify(behind !== null)
+    const own = Math.max(3, 8 * front.unit)
+    compare(front.pad, own)
+    const header = findChild(front, "cardHeader")
+    compare(header.x, own + 2 * front.unit)
+    for (const invalid of ["", "-1", "wide"]) {
+      Commons.Color.shellValues = ({ "fathom.card-padding": invalid })
+      compare(front.pad, own, JSON.stringify(invalid))
+    }
+    Commons.Color.shellValues = ({ "fathom.card-padding": "0" })
+    compare(front.pad, 0)
+    compare(behind.pad, 0)
+    const frame = findChild(front, "previewFrame")
+    fuzzyCompare(frame.parent.width, front.width, 0.01)
+    // The header keeps its inset: the title never touches the card's edge.
+    compare(header.x, own + 2 * front.unit)
+    Commons.Color.shellValues = ({ "fathom.card-padding": "20" })
+    compare(front.pad, 20)
+    compare(behind.pad, 20 * behind.depthScale)
+    compare(header.x, 20 + 2 * front.unit)
+  }
+
+  // Only "false" takes the surface from behind the preview; the header strip
+  // keeps it, and the selection's ring stays around the whole card.
+  function test_appearance_card_background_hides_only_on_false() {
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    const plane = fathom.fieldView.planeAt(fathom.selectedIndex)
+    const surface = findChild(plane, "cardSurface")
+    const ring = findChild(plane, "selectionOutline")
+    const cases = [["", true], ["true", true], ["none", true], ["false", false], [" FALSE ", false]]
+    for (let i = 0; i < cases.length; i++) {
+      Commons.Color.shellValues = ({ "fathom.card-background": cases[i][0] })
+      compare(fathom.fieldView.appearance.cardBackground, cases[i][1], JSON.stringify(cases[i][0]))
+      compare(surface.width, plane.width)
+      compare(surface.height, cases[i][1] ? plane.height : plane.headerHeight)
+      compare(surface.bottomLeftRadius, cases[i][1] ? plane.radius : 0)
+      compare(surface.topLeftRadius, Math.min(plane.radius, surface.height / 2))
+      verify(ring.visible)
+      compare(ring.height, plane.height + 6 * plane.unit)
     }
   }
 
@@ -693,6 +791,9 @@ TestCase {
     compare(rows[0].workspaceVisible, true)
     compare(rows[0].hasContent, true)
     compare(rows[0].sourceSize, "1600x1000")
+    const front = fathom.fieldView.planeAt(0)
+    compare(rows[0].card, Math.round(front.width) + "x" + Math.round(front.height))
+    compare(rows[0].preview, Math.round(front.previewSize.width) + "x" + Math.round(front.previewSize.height))
     compare(rows[1].workspaceVisible, false)
     compare(rows[1].hasContent, false)
     verify(fathom.firstContentMs >= 0, "records time to first frame")

@@ -424,6 +424,30 @@ test('the stage fits the front card and the stack behind it into the Deep', () =
   assert.ok(wide.frontWidth <= 3440 * 0.5 + 1e-6);
 });
 
+test('a card fitted to its window keeps the window\'s shape and its box\'s top-right corner', () => {
+  // A narrow window (half a scrolling column) in a 16:10 box.
+  const narrow = Layout.fittedCard(800, 500, 30, 8, 0.8);
+  close((narrow.width - 16) / (narrow.height - 38), 0.8, 1e-6);
+  close(narrow.height, 500);
+  assert.ok(narrow.width < 800 / 2, 'the empty space beside the preview is gone');
+  close(narrow.x + narrow.width, 800);
+  assert.equal(narrow.y, 0);
+  // A wide, low window fills the width and gives up height instead.
+  const wide = Layout.fittedCard(800, 500, 30, 8, 4);
+  close(wide.width, 800);
+  close((wide.width - 16) / (wide.height - 38), 4, 1e-6);
+  assert.equal(wide.x, 0);
+  assert.equal(wide.y, 0);
+  // Without padding the card is the preview under its header.
+  const bare = Layout.fittedCard(800, 500, 30, 0, 1);
+  close(bare.width, 470);
+  close(bare.height, 500);
+  // Padding larger than the box never turns the card inside out.
+  const crushed = Layout.fittedCard(100, 60, 30, 80, 1.6);
+  assert.ok(crushed.width > 0 && crushed.width <= 100 && crushed.height > 0 && crushed.height <= 60);
+  assert.ok(crushed.x >= 0);
+});
+
 test('cards recede up and to the right, each showing its header above the one in front', () => {
   const front = Layout.deepPlane(stage, 0);
   close(front.x, stage.frontX);

@@ -734,7 +734,9 @@ Item {
         hasContent: plane.hasContent,
         snapshot: plane.snapshot !== null,
         parked: plane.parked,
-        sourceSize: plane.hasContent ? plane.sourceSize.width + "x" + plane.sourceSize.height : ""
+        sourceSize: plane.hasContent ? plane.sourceSize.width + "x" + plane.sourceSize.height : "",
+        card: Math.round(plane.width) + "x" + Math.round(plane.height),
+        preview: Math.round(plane.previewSize.width) + "x" + Math.round(plane.previewSize.height)
       })
     }
     return rows

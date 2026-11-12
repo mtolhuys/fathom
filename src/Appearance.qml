@@ -14,6 +14,18 @@ QtObject {
   // "true"; then it opens the field as it does with more windows.
   readonly property bool openOnSingle: String(Commons.Color.pick("fathom.open-on-single", "")).trim().toLowerCase() === "true"
 
+  // The card of a window in the Deep (#16). "window" gives each card its
+  // window's own shape instead of the monitor's; any other value keeps the
+  // monitor's.
+  readonly property bool cardFitsWindow: String(Commons.Color.pick("fathom.card-fit", "")).trim().toLowerCase() === "window"
+  // The space between the card's edge and its preview, in pixels on the
+  // front card; negative (no value) keeps Fathom's own, which follows the
+  // screen's size.
+  readonly property real cardPadding: dimension(Commons.Color.pick("fathom.card-padding", ""), -1)
+  // The card's surface stays behind the whole card unless the value is
+  // "false"; then only the header strip keeps it, and the preview stands free.
+  readonly property bool cardBackground: String(Commons.Color.pick("fathom.card-background", "")).trim().toLowerCase() !== "false"
+
   function dimension(value, fallback) {
     const text = String(value).trim()
     const number = Number(text)

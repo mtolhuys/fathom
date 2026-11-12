@@ -1,6 +1,7 @@
-// One window in the Deep: a card of the monitor's shape, placed by its slot
-// relative to the camera (Layout.deepPlane), with a header strip (icon,
-// title, age) and the live capture fitted inside. Fog by how long ago the
+// One window in the Deep: a card of the monitor's shape (or, with card-fit =
+// "window", of its window's), placed by its slot relative to the camera
+// (Layout.deepPlane), with a header strip (icon, title, age) and the live
+// capture fitted inside. Fog by how long ago the
 // window was used (Depth.fogForDepth) fades the capture into the backdrop,
 // not the header, so every card stays readable however deep it sits. Colors
 // come from the theme through FieldView (Palette.js).
@@ -38,6 +39,8 @@ Item {
   readonly property bool urgent: !!(toplevel && toplevel.urgent)
   readonly property bool hasContent: capture.hasContent
   readonly property size sourceSize: capture.sourceSize
+  // What the card draws the window in (the `captures` report says it).
+  readonly property size previewSize: Qt.size(frame.width, frame.height)
   // Captures run only for cards near the camera; the rest of the field is
   // on the map, and capturing it would cost the compositor for nothing.
   readonly property bool capturing: controller !== null && controller.opened && inField
@@ -67,8 +70,16 @@ Item {
     ? Layout.OFFSCREEN_GEOMETRY
     : Layout.deepPlane(stage, r)
   readonly property real depthScale: Math.min(1, geometry.scale)
-  readonly property real headerHeight: Math.max(18 * textUnit, Math.min(30 * textUnit, height * 0.1))
-  readonly property real pad: Math.max(3, 8 * unit * depthScale)
+  readonly property real headerHeight: Math.max(18 * textUnit, Math.min(30 * textUnit, geometry.height * 0.1))
+  // Fathom's own padding follows the screen; `card-padding` replaces it, in
+  // pixels on the front card (zero stays zero).
+  readonly property real ownPad: Math.max(3, 8 * unit * depthScale)
+  readonly property real pad: appearance.cardPadding < 0 ? ownPad : appearance.cardPadding * depthScale
+  // The card inside its slot's box: the whole box, or (card-fit = "window")
+  // drawn closely around the window's own shape.
+  readonly property var box: appearance.cardFitsWindow && geometry !== Layout.OFFSCREEN_GEOMETRY
+    ? Layout.fittedCard(geometry.width, geometry.height, headerHeight, pad, aspect)
+    : null
   // The shell's corner radius on the front card, shrinking with depth like
   // the card itself (screen pixels: zero stays zero).
   readonly property real radius: card.appearance.cornerRadius * depthScale
@@ -99,10 +110,10 @@ Item {
     frame.grabToImage(result => target.keepSnapshot(address, result), Qt.size(width, height))
   }
 
-  x: geometry.x - geometry.width / 2
+  x: geometry.x - geometry.width / 2 + (box ? box.x : 0)
   y: geometry.y - geometry.height / 2
-  width: geometry.width
-  height: geometry.height
+  width: box ? box.width : geometry.width
+  height: box ? box.height : geometry.height
   z: geometry.z
   opacity: inField ? geometry.opacity : 0
   visible: opacity > 0.01
@@ -125,8 +136,11 @@ Item {
     onTriggered: card.takeSnapshot()
   }
 
+  // Without its surface a card of the monitor's shape is mostly empty, and
+  // casts no shadow; the selection keeps its glow.
   RectangularShadow {
     anchors.fill: parent
+    visible: card.appearance.cardBackground || card.appearance.cardFitsWindow || card.selected
     radius: card.radius
     blur: (card.selected ? 40 : 26) * card.unit
     spread: card.selected ? 3 * card.unit : 0
@@ -135,11 +149,15 @@ Item {
   }
 
   // Glass on a dark theme, paper on a light one: a little lighter at the
-  // top, like light from the surface.
+  // top, like light from the surface. With card-background = false only the
+  // header strip keeps it, square where it meets the preview.
   Rectangle {
     objectName: "cardSurface"
-    anchors.fill: parent
+    width: parent.width
+    height: card.appearance.cardBackground ? parent.height : card.headerHeight
     radius: card.radius
+    bottomLeftRadius: card.appearance.cardBackground ? undefined : 0
+    bottomRightRadius: card.appearance.cardBackground ? undefined : 0
     border.width: card.appearance.borderWidth
     border.color: card.hovered ? card.theme.cardBorderHover : card.theme.cardBorder
     gradient: Gradient {
@@ -151,8 +169,9 @@ Item {
   // Header strip: icon, title, age. Stays readable at any depth.
   Item {
     id: header
+    objectName: "cardHeader"
 
-    x: card.pad + 2 * card.unit
+    x: Math.max(card.pad, card.ownPad) + 2 * card.unit
     width: card.width - x * 2
     height: card.headerHeight
     opacity: 1 - card.fog * 0.45

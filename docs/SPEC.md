@@ -121,6 +121,12 @@ whatever the windows' own shapes are.
   band of its content to the right. The stack (front card plus five behind
   it) is centered in the space above the caption. Cards further back fade
   out; the map shows them.
+- On request (`card-fit = "window"` under `[fathom]`, #16) a card takes its
+  window's shape instead: the preview is fitted into its slot's box and the
+  card is drawn closely around it, on the box's top-right corner, so the
+  stack steps as before. `card-padding` and `card-background` set the space
+  around the preview and whether the surface lies behind it (README
+  "Settings"). The default is unchanged.
 - Fog darkens the capture of every card behind the camera, by its age and a
   little by its distance, never the header.
 - Passed cards grow and slide out to the lower left, fading within 0.6
@@ -389,7 +395,7 @@ the idle border (README "Settings").
 | `commit` / `cancel` | Focus the selection / close without focusing |
 | `state` | JSON: build identity, open, revealed, mode, watchdog, counts, filter, snapshots kept, Lua config |
 | `field` | JSON: every window with app, workspace, age, depth and fog |
-| `captures` | JSON: per card, whether it captures, whether a frame arrived, whether it shows a snapshot, whether it is parked off screen, whether its workspace is on screen |
+| `captures` | JSON: per card, whether it captures, whether a frame arrived, whether it shows a snapshot, whether it is parked off screen, whether its workspace is on screen, and the sizes of the card and of the preview in it |
 | `bench <seconds>` | Open, dive every 250 ms with the frame probe on, close |
 | `stats` | JSON: last bench's frame times and time to first frame |
 
