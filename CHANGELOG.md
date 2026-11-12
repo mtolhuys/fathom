@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.4 (2026-11-12)
+
+- Cards can take their windows' shapes. Three keys under `[fathom]` in
+  `shell.toml`, all optional, and without them nothing changes:
+  `card-fit = "window"` draws each card closely around its window instead of
+  in the monitor's shape, so a narrow column of a scrolling layout gets a
+  narrow card; `card-padding` sets the space around the preview; and
+  `card-background = false` keeps the card's surface behind the header only.
+  Asked for by tyvsmith (#16).
+- A last-seen frame can no longer come back after its window closed. A frame
+  is read back a moment after it is asked for; one that arrived after the
+  window had closed, or after another window had taken its address, was
+  still kept. Each one is now tied to the window it was taken of.
+
 ## 0.3.3 (2026-11-11)
 
 - Switching does less work. The cards are kept between openings and
