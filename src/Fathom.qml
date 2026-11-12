@@ -32,7 +32,7 @@ Item {
   property var shell: null
   property var manifest: null
 
-  readonly property string buildIdentity: "0.3.3-deep"
+  readonly property string buildIdentity: "0.3.4-deep"
   readonly property string pluginId: String((manifest && manifest.id) || "io.github.mtolhuys.fathom")
 
   // Read by the shell (isPluginOpen) as well as by the view.
@@ -306,9 +306,46 @@ Item {
   readonly property int snapshotWidth: 640
   property var snapshots: ({})
 
-  function keepSnapshot(address, result) {
+  // A grab finishes later, in an event of its own, and by then its window
+  // may have closed, or another window may have taken its address. So a grab
+  // starts with a ticket naming the window it is of (the address and the
+  // toplevel object), and its frame is kept only while the ticket still
+  // stands: a close or a disappearance voids every ticket for that address,
+  // and the toplevel now at the address must be the one the grab began with.
+  // At most snapshotLimit tickets wait; an older one is void.
+  property var snapshotTickets: []
+
+  function snapshotTicket(address, toplevel) {
     const key = Recency.normalizeAddress(address)
-    if (!key || !result || !result.url) return false
+    if (!key || !toplevel) return null
+    const ticket = { key: key, toplevel: toplevel, valid: true }
+    const waiting = root.snapshotTickets.filter(other => other.valid)
+    while (waiting.length >= root.snapshotLimit) waiting.shift().valid = false
+    waiting.push(ticket)
+    root.snapshotTickets = waiting
+    return ticket
+  }
+
+  function voidSnapshotTickets(key) {
+    const tickets = root.snapshotTickets
+    for (let i = 0; i < tickets.length; i++) if (tickets[i].key === key) tickets[i].valid = false
+  }
+
+  function toplevelAt(key) {
+    const toplevels = Hyprland.toplevels ? Hyprland.toplevels.values : []
+    for (let i = 0; i < toplevels.length; i++) {
+      if (toplevels[i] && Recency.normalizeAddress(toplevels[i].address) === key) return toplevels[i]
+    }
+    return null
+  }
+
+  function keepSnapshot(ticket, result) {
+    if (!ticket || !ticket.key) return false
+    const stands = ticket.valid === true
+    ticket.valid = false
+    root.snapshotTickets = root.snapshotTickets.filter(other => other.valid)
+    const key = ticket.key
+    if (!stands || !result || !result.url || root.toplevelAt(key) !== ticket.toplevel) return false
     const next = Object.assign({}, root.snapshots)
     next[key] = { url: String(result.url), takenAt: Date.now(), result: result }
     const keys = Object.keys(next)
@@ -333,18 +370,22 @@ Item {
   // event was missed: Hyprland reuses addresses.
   function sweepSnapshots() {
     const keys = Object.keys(root.snapshots)
-    if (!keys.length) return
+    const tickets = root.snapshotTickets
+    if (!keys.length && !tickets.length) return
     const present = {}
     const toplevels = Hyprland.toplevels ? Hyprland.toplevels.values : []
     for (let i = 0; i < toplevels.length; i++) {
       if (toplevels[i]) present[Recency.normalizeAddress(toplevels[i].address)] = true
     }
     for (let j = 0; j < keys.length; j++) if (!present[keys[j]]) root.dropSnapshot(keys[j])
+    for (let k = 0; k < tickets.length; k++) if (!present[tickets[k].key]) tickets[k].valid = false
   }
 
   function dropSnapshot(address) {
     const key = Recency.normalizeAddress(address)
-    if (!key || !(key in root.snapshots)) return
+    if (!key) return
+    root.voidSnapshotTickets(key)
+    if (!(key in root.snapshots)) return
     const next = Object.assign({}, root.snapshots)
     delete next[key]
     root.snapshots = next

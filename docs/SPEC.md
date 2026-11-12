@@ -10,7 +10,7 @@ really are.
 
 v1 is an overlay only: no real window moves.
 
-Status: 0.3.3. Phase 0 (0.1.0) proved the mechanics; Phase 1 (0.2.0) is the
+Status: 0.3.4. Phase 0 (0.1.0) proved the mechanics; Phase 1 (0.2.0) is the
 product: the card layout, the sounding line, the workspace map, fog,
 background blur, last-seen snapshots, the wheel, arrows and the filter. Mouse
 parallax is still open. [CHANGELOG.md](../CHANGELOG.md) has every release.
@@ -146,7 +146,10 @@ whatever the windows' own shapes are.
 - Snapshots live in the shell's memory only, never on disk: at most 24
   windows, oldest dropped first, and a window's snapshot goes when the window
   does (on `closewindow`, or when it leaves Hyprland's toplevel list, because
-  Hyprland reuses addresses). **(decision)**
+  Hyprland reuses addresses). A grab finishes in a later event, so it starts
+  with a ticket naming its window; a close or a disappearance voids the
+  ticket, and the frame is kept only if the toplevel now at the address is
+  the one the grab began with. **(decision)**
 - Urgent windows (Hyprland's urgent flag) get a red ring and dot.
 
 ## The sounding line **(owner: "earn the name", decision)**

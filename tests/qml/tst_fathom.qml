@@ -822,7 +822,7 @@ TestCase {
   function test_ipc_state_reports_build_identity() {
     createFathom()
     const state = JSON.parse(FakeSystem.ipc("fathom").state())
-    compare(state.buildIdentity, "0.3.3-deep")
+    compare(state.buildIdentity, "0.3.4-deep")
     compare(state.opened, false)
     compare(state.usingLua, true)
     compare(state.trackedWindows, 3)
@@ -1171,7 +1171,68 @@ TestCase {
     compare(Object.keys(fathom.snapshots).length, 2)
   }
 
-  // The map shows the frame a card kept, at no capture of its own; a window
+  // A grab finishes in a later event. A frame that arrives after its window
+  // closed, or went without a closewindow event, is not kept.
+  function test_a_grab_that_finishes_after_its_window_went_keeps_nothing() {
+    const fathom = createFathom()
+    const frame = { url: "image://grab/late" }
+    const b2 = Hyprland.toplevels.values[1]
+
+    const ticket = fathom.snapshotTicket("b2", b2)
+    verify(fathom.keepSnapshot(ticket, frame), "a frame of a window still there is kept")
+    verify("b2" in fathom.snapshots)
+    verify(!fathom.keepSnapshot(ticket, frame), "a ticket is good for one frame")
+
+    const closing = fathom.snapshotTicket("0xb2", b2)
+    Hyprland.rawEvent({ name: "closewindow", data: "b2" })
+    verify(!("b2" in fathom.snapshots), "the close took the snapshot")
+    verify(!fathom.keepSnapshot(closing, frame), "the frame arrives after the close")
+    verify(!("b2" in fathom.snapshots), "and does not bring the snapshot back")
+
+    // Still listed when the frame arrives: the close alone voided the ticket.
+    const early = fathom.snapshotTicket("a1", Hyprland.toplevels.values[0])
+    Hyprland.rawEvent({ name: "closewindow", data: "a1" })
+    verify(Hyprland.toplevels.values[0].address === "a1")
+    verify(!fathom.keepSnapshot(early, frame))
+    verify(!("a1" in fathom.snapshots))
+
+    const vanishing = fathom.snapshotTicket("c3", Hyprland.toplevels.values[2])
+    Hyprland.toplevels = { values: [Hyprland.toplevels.values[0], Hyprland.toplevels.values[1]] }
+    verify(!fathom.keepSnapshot(vanishing, frame), "the window went without a closewindow event")
+    verify(!("c3" in fathom.snapshots))
+    compare(fathom.snapshotTickets.length, 0)
+  }
+
+  // Hyprland reuses addresses: a frame of the window that had the address
+  // before never becomes the snapshot of the window that has it now.
+  function test_a_grab_of_the_window_that_had_the_address_before_keeps_nothing() {
+    const fathom = createFathom()
+    const frame = { url: "image://grab/old" }
+    const old = Hyprland.toplevels.values[1]
+    const ticket = fathom.snapshotTicket("b2", old)
+    // Another window at b2, in one change of the list: no close event, and
+    // the address never absent.
+    const replacement = toplevel("b2", 1, 1)
+    Hyprland.toplevels = { values: [Hyprland.toplevels.values[0], replacement, Hyprland.toplevels.values[2]] }
+    verify(!fathom.keepSnapshot(ticket, frame), "the old window's frame is refused")
+    verify(!("b2" in fathom.snapshots))
+    const fresh = fathom.snapshotTicket("b2", replacement)
+    verify(fathom.keepSnapshot(fresh, frame), "the new window's own frame is kept")
+    verify("b2" in fathom.snapshots)
+  }
+
+  // No more tickets wait than snapshots are kept; an older one is void.
+  function test_waiting_grabs_are_bounded() {
+    const fathom = createFathom()
+    const a1 = Hyprland.toplevels.values[0]
+    const first = fathom.snapshotTicket("a1", a1)
+    for (let i = 0; i < fathom.snapshotLimit; i++) fathom.snapshotTicket("a1", a1)
+    compare(fathom.snapshotTickets.length, fathom.snapshotLimit)
+    verify(!fathom.keepSnapshot(first, { url: "image://grab/first" }))
+    verify(!("a1" in fathom.snapshots))
+  }
+
+
   // never seen keeps its icon.
   function test_map_tiles_show_the_last_frame_seen() {
     setUpDesktop([toplevel("a1", 1, 0), toplevel("b2", 1, 1), toplevel("c3", 2, 2), toplevel("d4", 2, 3, { contentReady: false })])
