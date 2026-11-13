@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.5 (2026-11-13)
+
+- A last-seen frame takes at most 640 by 640 pixels. Its width was held to
+  640, but its height followed the window, so a very tall window asked the
+  shell for a very large image. Found in the review of the 0.3.4 update.
+
 ## 0.3.4 (2026-11-12)
 
 - Cards can take their windows' shapes. Three keys under `[fathom]` in
