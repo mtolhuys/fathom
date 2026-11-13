@@ -424,6 +424,32 @@ test('the stage fits the front card and the stack behind it into the Deep', () =
   assert.ok(wide.frontWidth <= 3440 * 0.5 + 1e-6);
 });
 
+// The library's objects come from another realm: compare them as plain ones.
+const snap = (...args) => ({ ...Layout.snapshotSize(...args) });
+
+test('a snapshot is grabbed inside a 640 px square, in its frame\'s shape', () => {
+  // A 16:10 window: 640 wide, as before.
+  assert.deepEqual(snap(800, 500, 1600, 1000, 640), { width: 640, height: 400 });
+  // A tall window (a phone-sized column, or 1:50): the height is held to 640 too.
+  assert.deepEqual(snap(200, 1000, 400, 2000, 640), { width: 128, height: 640 });
+  const tall = Layout.snapshotSize(20, 1000, 64, 3200, 640);
+  assert.ok(tall.height <= 640 && tall.width >= 1, JSON.stringify(tall));
+  // A very wide one stays within 640 wide and keeps at least a pixel high.
+  const wide = Layout.snapshotSize(5000, 10, 10000, 20, 640);
+  assert.deepEqual({ ...wide }, { width: 640, height: 1 });
+  // Never more pixels than the window's own frame.
+  assert.deepEqual(snap(800, 500, 320, 200, 640), { width: 320, height: 200 });
+  // Whatever the shapes, the grab never passes edge x edge.
+  for (const [fw, fh, sw, sh] of [[1, 100000, 1, 100000], [100000, 1, 100000, 1], [3, 7, 9000, 21000], [640, 641, 0, 0]]) {
+    const size = Layout.snapshotSize(fw, fh, sw, sh, 640);
+    assert.ok(size.width >= 1 && size.width <= 640 && size.height >= 1 && size.height <= 640, JSON.stringify(size));
+  }
+  // Nothing to grab.
+  assert.equal(Layout.snapshotSize(0, 500, 1600, 1000, 640), null);
+  assert.equal(Layout.snapshotSize(800, NaN, 1600, 1000, 640), null);
+  assert.equal(Layout.snapshotSize(800, Infinity, 1600, 1000, 640), null);
+});
+
 test('a card fitted to its window keeps the window\'s shape and its box\'s top-right corner', () => {
   // A narrow window (half a scrolling column) in a 16:10 box.
   const narrow = Layout.fittedCard(800, 500, 30, 8, 0.8);

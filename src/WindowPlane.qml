@@ -103,12 +103,12 @@ Item {
   function takeSnapshot() {
     if (!capture.hasContent || !controller || !controller.opened || !entry || !capturing) return
     if (!controller.wantsSnapshot(entry.address)) return
-    const width = Math.max(1, Math.min(controller.snapshotWidth, capture.sourceSize.width))
-    const height = Math.max(1, Math.round(width * frame.height / Math.max(1, frame.width)))
+    const size = Layout.snapshotSize(frame.width, frame.height, capture.sourceSize.width, capture.sourceSize.height, controller.snapshotEdge)
+    if (!size) return
     const target = controller
     const ticket = target.snapshotTicket(entry.address, toplevel)
     if (!ticket) return
-    frame.grabToImage(result => target.keepSnapshot(ticket, result), Qt.size(width, height))
+    frame.grabToImage(result => target.keepSnapshot(ticket, result), Qt.size(size.width, size.height))
   }
 
   x: geometry.x - geometry.width / 2 + (box ? box.x : 0)

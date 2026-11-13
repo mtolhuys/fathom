@@ -10,7 +10,7 @@ really are.
 
 v1 is an overlay only: no real window moves.
 
-Status: 0.3.4. Phase 0 (0.1.0) proved the mechanics; Phase 1 (0.2.0) is the
+Status: 0.3.5. Phase 0 (0.1.0) proved the mechanics; Phase 1 (0.2.0) is the
 product: the card layout, the sounding line, the workspace map, fog,
 background blur, last-seen snapshots, the wheel, arrows and the filter. Mouse
 parallax is still open. [CHANGELOG.md](../CHANGELOG.md) has every release.
@@ -139,7 +139,9 @@ whatever the windows' own shapes are.
   deliver a frame (seen on the device; not a matter of minimizing, which
   Hyprland does not have). Each card therefore keeps the last frame it saw
   while the field was open: a snapshot of what the card drew, 400 ms after the
-  first frame, at most 640 px wide, not taken again while younger than 30 s.
+  first frame, in the frame's shape inside a square of 640 px (a tall or a
+  wide window costs no more than a square one, and never more pixels than its
+  own frame), not taken again while younger than 30 s.
   When no live frame comes, the card shows its snapshot with a "last seen
   12 min ago" badge; a window never seen shows its app icon and name and says
   "off screen · no live preview". **(owner, decision)**

@@ -32,7 +32,7 @@ Item {
   property var shell: null
   property var manifest: null
 
-  readonly property string buildIdentity: "0.3.4-deep"
+  readonly property string buildIdentity: "0.3.5-deep"
   readonly property string pluginId: String((manifest && manifest.id) || "io.github.mtolhuys.fathom")
 
   // Read by the shell (isPluginOpen) as well as by the view.
@@ -301,9 +301,10 @@ Item {
   // it, marked with its age, when a live frame does not come; the map shows
   // the same images as thumbnails. Bounded to
   // snapshotLimit windows, oldest dropped first; a window's snapshot goes
-  // when the window closes.
+  // when the window closes. Each is grabbed inside a square of snapshotEdge
+  // pixels (Layout.snapshotSize), whatever the window's shape.
   readonly property int snapshotLimit: 24
-  readonly property int snapshotWidth: 640
+  readonly property int snapshotEdge: 640
   property var snapshots: ({})
 
   // A grab finishes later, in an event of its own, and by then its window

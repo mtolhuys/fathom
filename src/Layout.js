@@ -51,6 +51,22 @@ function fit(boxWidth, boxHeight, aspect) {
     };
 }
 
+// The size a snapshot of a frame of frameWidth x frameHeight is grabbed at:
+// the frame's shape, inside a square of `edge` and never larger than the
+// window's own frame (sourceWidth x sourceHeight), so a tall or a wide window
+// costs no more than a square one. Null when there is nothing to grab.
+function snapshotSize(frameWidth, frameHeight, sourceWidth, sourceHeight, edge) {
+    if (!(frameWidth > 0) || !(frameHeight > 0) || !isFinite(frameWidth) || !isFinite(frameHeight)) return null;
+    var maxWidth = Math.min(edge, sourceWidth > 0 ? sourceWidth : edge);
+    var maxHeight = Math.min(edge, sourceHeight > 0 ? sourceHeight : edge);
+    var scale = Math.min(maxWidth / frameWidth, maxHeight / frameHeight);
+    if (!(scale > 0) || !isFinite(scale)) return null;
+    return {
+        width: clamp(Math.round(frameWidth * scale), 1, Math.floor(maxWidth)),
+        height: clamp(Math.round(frameHeight * scale), 1, Math.floor(maxHeight))
+    };
+}
+
 // The card of a window that takes its window's shape (card-fit = "window"):
 // the preview fitted into the room a box of boxWidth x boxHeight leaves under
 // the header and inside the padding, and the card drawn closely around it.

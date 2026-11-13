@@ -60,7 +60,8 @@ Fathom runs inside Maarten's working session. These hold without exception:
   way of ending a switch (Alt release, Escape, click, watchdog) closes it.
 - Captures exist only while the field is open. The last frame of each window
   (a snapshot, to stand in for windows Hyprland cannot render) is kept in
-  memory only, never on disk, for at most 24 windows, and goes with its window:
+  memory only, never on disk, for at most 24 windows, each at most 640 by 640
+  pixels whatever the window's shape, and goes with its window:
   a grab that finishes after its window closed, or after another window took
   its address, is not kept.
 - Every input handler is idempotent: a second release, commit or cancel is a
