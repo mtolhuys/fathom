@@ -159,7 +159,9 @@ Item {
 
   // ------------------------------------------------------------ the Deep
 
-  readonly property real mapHeight: Math.max(96, Math.min(height * 0.2, 210 * unit))
+  // The row gives the map a little less height: the flat sounding line above
+  // it already says when each window was used.
+  readonly property real mapHeight: Math.max(96, Math.min(height * 0.2, 210 * unit)) * (appearance.rowLayout ? 0.85 : 1)
   readonly property real captionHeight: 62 * unit
   readonly property real deepTop: margin + 44 * unit
   // The sounding line takes a column on the left when there is room for it.
