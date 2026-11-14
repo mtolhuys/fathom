@@ -276,6 +276,43 @@ TestCase {
     render("compact-cards-bare-light", fathom)
   }
 
+  // layout = "row": the scene of 03-fifteen-deep laid out as a row, with the
+  // sounding line flat between the caption and the map; at the surface, with
+  // two windows, on a small screen and in a light theme.
+  function test_row_deep() {
+    Commons.Color.shellValues = ({ "fathom.layout": "row" })
+    const fathom = open(15, 1600, 1000, "hold")
+    for (let i = 0; i < 4; i++) FakeSystem.press("fathom", "next")
+    render("row-deep", fathom)
+  }
+
+  function test_row_surface() {
+    Commons.Color.shellValues = ({ "fathom.layout": "row" })
+    const fathom = open(10, 1600, 1000, "hold")
+    render("row-surface", fathom)
+  }
+
+  function test_row_two_windows() {
+    Commons.Color.shellValues = ({ "fathom.layout": "row" })
+    const fathom = open(2, 1600, 1000, "hold")
+    render("row-two-windows", fathom)
+  }
+
+  function test_row_small_screen() {
+    Commons.Color.shellValues = ({ "fathom.layout": "row" })
+    const fathom = open(8, 1280, 800, "hold")
+    FakeSystem.press("fathom", "next")
+    render("row-small-screen", fathom)
+  }
+
+  function test_row_light() {
+    useTheme("rose-pine")
+    Commons.Color.shellValues = ({ "fathom.layout": "row" })
+    const fathom = open(15, 1600, 1000, "hold")
+    for (let i = 0; i < 2; i++) FakeSystem.press("fathom", "next")
+    render("row-light", fathom)
+  }
+
   // The scene of 03-fifteen-deep with the scratchpad left out of the Deep; the
   // map still shows it. The header and the counter both leave it out.
   function test_scratchpads_hidden() {

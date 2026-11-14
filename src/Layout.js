@@ -20,6 +20,14 @@ var PASSED_FADE = 0.6;      // steps over which a passed card fades out
 var PASSED_GROWTH = 0.2;    // extra scale of a card one step past
 var VISIBLE_STEPS = 5;      // cards further back fade out; the map shows them
 
+// The row (layout = "row"): the selection in the middle, the windows already
+// passed to its left and the older ones to its right, each step smaller and
+// fainter. Nothing leaves the row while it is within ROW_STEPS of the camera.
+var ROW_FRONT = 0.46;       // the front card's share of the row's width
+var ROW_Q = 0.6;            // card scale per step away from the camera
+var ROW_FADE = 0.18;        // opacity lost per step away from the camera
+var ROW_STEPS = 3;          // cards per side; further ones fade out
+
 // The shared frozen shape for planes outside the visible band: returning the
 // same object reference each time keeps the QML var change signal quiet, so
 // the dependent bindings of those planes stop re-evaluating.
@@ -142,6 +150,52 @@ function deepPlane(stage, r) {
         scale: scale,
         opacity: clamp(VISIBLE_STEPS + 1 - r, 0, 1),
         z: 1000 - r
+    };
+}
+
+// The front box of the row for a screen of width x height, between `top` and
+// `height - bottom`, with `left` kept clear and a margin on both sides. The
+// front card is centered; `side` is the room each side keeps for its cards.
+function rowStage(width, height, top, bottom, aspect, left) {
+    var inset = Math.max(0, Number(left) || 0);
+    var a = clamp(Number(aspect) || 1.6, 1.2, 2.4);
+    var available = Math.max(1, height - top - bottom);
+    var margin = width * 0.03;
+    var room = Math.max(1, width - inset - margin * 2);
+    var frontWidth = room * ROW_FRONT;
+    var frontHeight = frontWidth / a;
+    if (frontHeight > available) {
+        frontHeight = available;
+        frontWidth = frontHeight * a;
+    }
+    return {
+        frontX: inset + margin + room / 2,
+        frontY: top + available / 2,
+        frontWidth: frontWidth,
+        frontHeight: frontHeight,
+        side: (room - frontWidth) / 2
+    };
+}
+
+// stage: from rowStage. r: the card's slot minus the camera slot (real,
+// negative once passed). Each card's outer edge steps out by a share of the
+// side's room that shrinks by POS_Q, so the last card ends at the margin and
+// every card shows a band, header included, beyond the one nearer the middle.
+function rowPlane(stage, r) {
+    var d = Math.abs(r);
+    var direction = r < 0 ? -1 : 1;
+    var scale = Math.pow(ROW_Q, d);
+    var width = stage.frontWidth * scale;
+    var height = stage.frontHeight * scale;
+    var edge = stage.frontWidth / 2 + stage.side * stepSum(d) / stepSum(ROW_STEPS);
+    return {
+        x: stage.frontX + direction * (edge - width / 2),
+        y: stage.frontY,
+        width: width,
+        height: height,
+        scale: scale,
+        opacity: clamp(ROW_STEPS + 1 - d, 0, 1) * clamp(1 - ROW_FADE * d, 0, 1),
+        z: 1000 - d
     };
 }
 

@@ -154,6 +154,28 @@ whatever the windows' own shapes are.
   the one the grab began with. **(decision)**
 - Urgent windows (Hyprland's urgent flag) get a red ring and dot.
 
+## The row (`layout = "row"`) **(decision)**
+
+An optional arrangement of the same cards, for anyone who wants to keep the
+windows they have passed in view. Without the key nothing changes.
+
+- The selection's card is centered, at 0.46 of the width between the margins
+  (less when the height does not allow it).
+- Windows already passed sit to its left, older ones to its right, in the
+  same recency order as the stack. Each step away from the camera scales a
+  card by 0.6 and takes 0.18 of its opacity; three cards show on each side,
+  and the map shows the rest.
+- Each card's outer edge steps out by a share of the side's room that shrinks
+  by 0.86 per step, so the last card ends at the margin and every card shows a
+  band beyond the one nearer the middle. On the right the header is mirrored
+  (icon and title on the card's right edge), so it falls in that band.
+- Fog counts steps either side of the camera.
+- The sounding line lies flat between the caption and the map, from the
+  surface on the left to "2h+" on the right, the direction the row ages in.
+  Marks stack upward above the line, the lead runs out along it, and a click
+  or a drag picks the window nearest that depth, as on the upright line. The
+  key hints move up beside the window count.
+
 ## The sounding line **(owner: "earn the name", decision)**
 
 A fathom is a unit of water depth, and depth is what Fathom measures. The
@@ -175,7 +197,7 @@ sounding line reads it the way a lead line reads water.
 - The caption reads the depth ("2.3 fathoms"; "at the surface" when just
   used; nothing for the focused window or an estimate).
 - Shown when the screen is at least 1000 px wide; the Deep is laid out to its
-  right.
+  right. In the row it lies flat instead (see "The row").
 
 ## The map **(owner, decision)**
 

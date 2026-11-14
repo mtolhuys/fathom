@@ -27,6 +27,7 @@ Item {
   readonly property int planeCount: planes.count
   readonly property alias map: map
   readonly property alias gauge: gauge
+  readonly property alias flatGauge: flatGauge
   // Every color the field draws with, derived from the theme (light or dark)
   // and derived again when the theme changes (Palette.js).
   readonly property var theme: Palette.derive({
@@ -162,10 +163,17 @@ Item {
   readonly property real captionHeight: 62 * unit
   readonly property real deepTop: margin + 44 * unit
   // The sounding line takes a column on the left when there is room for it.
-  readonly property real gaugeWidth: width >= 1000 ? 112 * textUnit : 0
+  // In the row (layout = "row") it lies flat between the caption and the map
+  // instead, and the cards get the whole width.
+  readonly property bool rowLayout: appearance.rowLayout
+  readonly property real gaugeWidth: !rowLayout && width >= 1000 ? 112 * textUnit : 0
+  readonly property real flatGaugeHeight: rowLayout ? 58 * textUnit : 0
   // Cards take the shape of this screen, which is the focused monitor.
-  readonly property var stage: Layout.deepStage(width, height, deepTop,
-    mapHeight + captionHeight + margin + 30 * unit, width / Math.max(1, height), margin + gaugeWidth)
+  readonly property var stage: rowLayout
+    ? Layout.rowStage(width, height, deepTop, mapHeight + captionHeight + flatGaugeHeight + margin + 30 * unit,
+      width / Math.max(1, height), 0)
+    : Layout.deepStage(width, height, deepTop,
+      mapHeight + captionHeight + margin + 30 * unit, width / Math.max(1, height), margin + gaugeWidth)
 
   // How deep the selection sits, animated: the lead follows it down the
   // sounding line and the light fades with it.
@@ -217,13 +225,29 @@ Item {
     leadDepth: view.sceneDepth
   }
 
+  SoundingLineFlat {
+    id: flatGauge
+    objectName: "flatGauge"
+
+    x: view.margin
+    y: view.height - view.margin - view.mapHeight - view.flatGaugeHeight - 8 * view.unit
+    width: view.width - view.margin * 2
+    height: view.flatGaugeHeight
+    visible: view.rowLayout
+    controller: view.controller
+    theme: view.theme
+    unit: view.unit
+    textUnit: view.textUnit
+    leadDepth: view.sceneDepth
+  }
+
   // ------------------------------------------------------------ caption
 
   Item {
     id: caption
 
     x: view.stage.frontX - view.stage.frontWidth / 2
-    y: view.height - view.margin - view.mapHeight - view.captionHeight - 14 * view.unit
+    y: view.height - view.margin - view.mapHeight - view.flatGaugeHeight - view.captionHeight - 14 * view.unit
     width: view.width - x - view.margin
     height: view.captionHeight
     visible: view.entry !== null
@@ -429,7 +453,9 @@ Item {
 
     anchors.right: parent.right
     anchors.rightMargin: view.margin
-    y: view.height - view.margin - view.mapHeight - 20 * view.unit
+    // In the row the flat sounding line takes this place; the hints move up
+    // beside the window count.
+    y: view.rowLayout ? view.margin + 2 * view.unit : view.height - view.margin - view.mapHeight - 20 * view.unit
     spacing: 16 * view.unit
 
     Repeater {

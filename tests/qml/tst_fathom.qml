@@ -1108,6 +1108,56 @@ TestCase {
     compare(JSON.parse(FakeSystem.ipc("fathom").state()).snapshots, 2)
   }
 
+  // layout = "row": only "row" (any case, trimmed) turns it on; the stack is
+  // the default. The row puts the selection in the middle and the passed
+  // window on its left, and the sounding line lies flat with nothing beside
+  // the cards.
+  function test_layout_row_only_on_row() {
+    FakeSystem.surfaceWidth = 1600
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    const view = fathom.fieldView
+    const cases = [["", false], ["stack", false], ["row", true], [" ROW ", true], ["true", false]]
+    for (let i = 0; i < cases.length; i++) {
+      Commons.Color.shellValues = ({ "fathom.layout": cases[i][0] })
+      compare(view.appearance.rowLayout, cases[i][1], JSON.stringify(cases[i][0]))
+      compare(view.flatGauge.visible, cases[i][1])
+      compare(view.gauge.visible, !cases[i][1])
+    }
+    Commons.Color.shellValues = ({ "fathom.layout": "row" })
+    fathom.select(1)
+    const passed = view.planeAt(0)
+    const front = view.planeAt(1)
+    tryVerify(function() { return front.selected && Math.abs(front.r) < 0.001 }, 2000)
+    fuzzyCompare(front.x + front.width / 2, view.stage.frontX, 0.01)
+    verify(passed.opacity > 0.5, "the passed window stays in the row")
+    verify(passed.x + passed.width / 2 < front.x + front.width / 2, "on the left")
+    verify(view.planeAt(2).x > front.x, "the older one on the right")
+  }
+
+  function test_the_flat_sounding_line_picks_by_depth_and_the_lead_follows() {
+    FakeSystem.surfaceWidth = 1200
+    Commons.Color.shellValues = ({ "fathom.layout": "row" })
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    const gauge = fathom.fieldView.flatGauge
+    verify(gauge.visible)
+    compare(gauge.marks.length, 3)
+    const x = Layout.soundingY(Math.log(3) / Math.LN2, gauge.lineStart, gauge.lineEnd)
+    mouseClick(gauge, x, gauge.marksBottom - 4)
+    compare(fathom.selectedIndex, 2)
+    tryVerify(function() { return Math.abs(gauge.leadDepth - fathom.field[2].depth) < 1e-3 }, 1000,
+      "the lead runs out to the selection")
+    // Dragging back to the surface.
+    mousePress(gauge, x, gauge.marksBottom - 4)
+    mouseMove(gauge, gauge.lineStart, gauge.marksBottom - 4)
+    mouseRelease(gauge, gauge.lineStart, gauge.marksBottom - 4)
+    compare(fathom.selectedIndex, 0)
+    verify(fathom.opened)
+  }
+
   function test_the_sounding_line_picks_by_depth_and_the_lead_follows() {
     FakeSystem.surfaceWidth = 1200
     const fathom = createFathom()

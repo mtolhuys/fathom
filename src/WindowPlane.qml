@@ -66,9 +66,13 @@ Item {
   // of band stop driving their x/y/width/height/z/opacity/pad/radius/fog
   // bindings every animation frame, and since the same object reference
   // comes back each time, the var change signal stays quiet.
-  readonly property var geometry: !stage || r < -1.5 || r > Layout.VISIBLE_STEPS + 1
+  // In the row (layout = "row") the band is [-(ROW_STEPS + 1), ROW_STEPS + 1],
+  // where rowPlane's opacity reaches 0 on both sides.
+  readonly property bool inRow: appearance.rowLayout
+  readonly property var geometry: !stage
+    || (inRow ? Math.abs(r) > Layout.ROW_STEPS + 1 : (r < -1.5 || r > Layout.VISIBLE_STEPS + 1))
     ? Layout.OFFSCREEN_GEOMETRY
-    : Layout.deepPlane(stage, r)
+    : (inRow ? Layout.rowPlane(stage, r) : Layout.deepPlane(stage, r))
   readonly property real depthScale: Math.min(1, geometry.scale)
   readonly property real headerHeight: Math.max(18 * textUnit, Math.min(30 * textUnit, geometry.height * 0.1))
   // Fathom's own padding follows the screen; `card-padding` replaces it, in
@@ -83,8 +87,11 @@ Item {
   // The shell's corner radius on the front card, shrinking with depth like
   // the card itself (screen pixels: zero stays zero).
   readonly property real radius: card.appearance.cornerRadius * depthScale
+  // Steps from the camera that fog counts: behind it in the stack, either
+  // side of it in the row.
+  readonly property real fogSteps: inRow ? Math.abs(r) : r
   readonly property real fog: entry
-    ? theme.fogStrength * Math.min(0.7, Math.max(0, Math.min(1, r)) * (0.12 + Depth.fogForDepth(entry.depth) * 0.75) + 0.05 * Math.max(0, r - 1))
+    ? theme.fogStrength * Math.min(0.7, Math.max(0, Math.min(1, fogSteps)) * (0.12 + Depth.fogForDepth(entry.depth) * 0.75) + 0.05 * Math.max(0, fogSteps - 1))
     : 0
   readonly property string titleText: toplevel && toplevel.title ? String(toplevel.title) : (entry ? entry.title : "")
   // Outside its monitor's area (a scrolling layout parked it beside the
@@ -176,10 +183,16 @@ Item {
     width: card.width - x * 2
     height: card.headerHeight
     opacity: 1 - card.fog * 0.45
+    // On the right of the row the card in front covers this card's left
+    // side, so the icon and title move to its right edge, where they show.
+    LayoutMirroring.enabled: card.inRow && card.r > 0
+    LayoutMirroring.childrenInherit: true
 
     AppIcon {
       id: headerIcon
 
+      // Anchored, not placed, so the row's mirroring moves it too.
+      anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       size: card.headerHeight * 0.6
       source: card.entry ? card.entry.icon : ""
@@ -192,6 +205,8 @@ Item {
       anchors.right: headerAge.left
       anchors.rightMargin: 8 * card.unit
       anchors.verticalCenter: parent.verticalCenter
+      // Named so the row's mirroring flips it: the title then ends at the icon.
+      horizontalAlignment: Text.AlignLeft
       elide: Text.ElideRight
       color: card.theme.text
       font.family: Commons.Style.font.family
