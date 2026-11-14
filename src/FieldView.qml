@@ -27,7 +27,8 @@ Item {
   readonly property int planeCount: planes.count
   readonly property alias map: map
   readonly property alias gauge: gauge
-  readonly property alias flatGauge: flatGauge
+  // The flat sounding line of the row, or null in the stack.
+  readonly property var flatGauge: flatGaugeLoader.item
   // Every color the field draws with, derived from the theme (light or dark)
   // and derived again when the theme changes (Palette.js).
   readonly property var theme: Palette.derive({
@@ -161,7 +162,7 @@ Item {
 
   // The row gives the map a little less height: the flat sounding line above
   // it already says when each window was used.
-  readonly property real mapHeight: Math.max(96, Math.min(height * 0.2, 210 * unit)) * (appearance.rowLayout ? 0.85 : 1)
+  readonly property real mapHeight: Math.max(96, Math.min(height * 0.2, 210 * unit) * (appearance.rowLayout ? 0.85 : 1))
   readonly property real captionHeight: 62 * unit
   readonly property real deepTop: margin + 44 * unit
   // The sounding line takes a column on the left when there is room for it.
@@ -227,20 +228,25 @@ Item {
     leadDepth: view.sceneDepth
   }
 
-  SoundingLineFlat {
-    id: flatGauge
-    objectName: "flatGauge"
+  // Built only for the row, so the stack carries none of its bindings.
+  Loader {
+    id: flatGaugeLoader
 
     x: view.margin
     y: view.height - view.margin - view.mapHeight - view.flatGaugeHeight - 8 * view.unit
     width: view.width - view.margin * 2
     height: view.flatGaugeHeight
-    visible: view.rowLayout
-    controller: view.controller
-    theme: view.theme
-    unit: view.unit
-    textUnit: view.textUnit
-    leadDepth: view.sceneDepth
+    active: view.rowLayout
+
+    sourceComponent: SoundingLineFlat {
+      objectName: "flatGauge"
+
+      controller: view.controller
+      theme: view.theme
+      unit: view.unit
+      textUnit: view.textUnit
+      leadDepth: view.sceneDepth
+    }
   }
 
   // ------------------------------------------------------------ caption

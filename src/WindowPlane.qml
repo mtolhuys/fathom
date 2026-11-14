@@ -42,9 +42,11 @@ Item {
   // What the card draws the window in (the `captures` report says it).
   readonly property size previewSize: Qt.size(frame.width, frame.height)
   // Captures run only for cards near the camera; the rest of the field is
-  // on the map, and capturing it would cost the compositor for nothing.
+  // on the map, and capturing it would cost the compositor for nothing. The
+  // row shows ROW_STEPS cards on both sides, so it captures those.
   readonly property bool capturing: controller !== null && controller.opened && inField
-    && r > -1.2 && r < Layout.VISIBLE_STEPS + 0.5 && !!toplevel && !!toplevel.wayland
+    && (inRow ? Math.abs(r) < Layout.ROW_STEPS + 0.5 : r > -1.2 && r < Layout.VISIBLE_STEPS + 0.5)
+    && !!toplevel && !!toplevel.wayland
 
   // The window's own shape, for fitting it into the card: the frame's size
   // once one arrived, else Hyprland's reported size, else 16:10.
@@ -118,7 +120,9 @@ Item {
     frame.grabToImage(result => target.keepSnapshot(ticket, result), Qt.size(size.width, size.height))
   }
 
-  x: geometry.x - geometry.width / 2 + (box ? box.x : 0)
+  // A fitted card keeps its box's top-right corner in the stack, the corner
+  // the stack steps by; in the row it is centered in its slot.
+  x: geometry.x - geometry.width / 2 + (box ? (inRow ? (geometry.width - box.width) / 2 : box.x) : 0)
   y: geometry.y - geometry.height / 2
   width: box ? box.width : geometry.width
   height: box ? box.height : geometry.height
@@ -205,8 +209,9 @@ Item {
       anchors.right: headerAge.left
       anchors.rightMargin: 8 * card.unit
       anchors.verticalCenter: parent.verticalCenter
-      // Named so the row's mirroring flips it: the title then ends at the icon.
-      horizontalAlignment: Text.AlignLeft
+      // Named in the row so its mirroring flips it and the title ends at the
+      // icon; reset elsewhere, so a title keeps its own direction.
+      horizontalAlignment: card.inRow ? Text.AlignLeft : undefined
       elide: Text.ElideRight
       color: card.theme.text
       font.family: Commons.Style.font.family

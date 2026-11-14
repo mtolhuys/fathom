@@ -1122,7 +1122,7 @@ TestCase {
     for (let i = 0; i < cases.length; i++) {
       Commons.Color.shellValues = ({ "fathom.layout": cases[i][0] })
       compare(view.appearance.rowLayout, cases[i][1], JSON.stringify(cases[i][0]))
-      compare(view.flatGauge.visible, cases[i][1])
+      compare(view.flatGauge !== null, cases[i][1], "the flat line exists only in the row")
       compare(view.gauge.visible, !cases[i][1])
     }
     Commons.Color.shellValues = ({ "fathom.layout": "row" })
@@ -1134,6 +1134,30 @@ TestCase {
     verify(passed.opacity > 0.5, "the passed window stays in the row")
     verify(passed.x + passed.width / 2 < front.x + front.width / 2, "on the left")
     verify(view.planeAt(2).x > front.x, "the older one on the right")
+    // The header on the right is mirrored so its title shows beside the card
+    // in front; on the left, and in the stack, it is not.
+    const rightHeader = findChild(view.planeAt(2), "cardHeader")
+    verify(rightHeader.LayoutMirroring.enabled)
+    verify(!findChild(passed, "cardHeader").LayoutMirroring.enabled)
+    Commons.Color.shellValues = ({})
+    verify(!rightHeader.LayoutMirroring.enabled)
+  }
+
+  // The row captures every card it shows: two steps passed is still in view,
+  // where the stack has let it go.
+  function test_the_row_captures_the_cards_it_shows() {
+    FakeSystem.surfaceWidth = 1600
+    const fathom = createFathom()
+    FakeSystem.ipc("fathom").open()
+    tryCompare(fathom.fieldView, "planeCount", 3)
+    const view = fathom.fieldView
+    fathom.select(2)
+    const passed = view.planeAt(0)
+    tryVerify(function() { return Math.abs(passed.r + 2) < 0.001 }, 2000)
+    verify(!passed.capturing, "the stack has let it go")
+    Commons.Color.shellValues = ({ "fathom.layout": "row" })
+    verify(passed.capturing, "the row still shows it")
+    verify(passed.opacity > 0)
   }
 
   function test_the_flat_sounding_line_picks_by_depth_and_the_lead_follows() {

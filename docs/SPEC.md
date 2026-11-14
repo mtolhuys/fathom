@@ -133,7 +133,8 @@ whatever the windows' own shapes are.
   steps.
 - The camera animates between cards in 220 ms (OutCubic).
 - Captures run only for cards near the camera (from one step passed to the
-  last visible card) and only while the field is open.
+  last visible card; in the row, every card it shows) and only while the field
+  is open.
 - Hyprland renders a window for capture only while it lies within its
   monitor's area, so windows a scrolling layout parks beside the screen never
   deliver a frame (seen on the device; not a matter of minimizing, which
@@ -169,12 +170,16 @@ windows they have passed in view. Without the key nothing changes.
   by 0.86 per step, so the last card ends at the margin and every card shows a
   band beyond the one nearer the middle. On the right the header is mirrored
   (icon and title on the card's right edge), so it falls in that band.
-- Fog counts steps either side of the camera.
+- Fog counts steps either side of the camera, and captures run for every card
+  the row shows (up to three steps either side).
+- With `card-fit = "window"`, a fitted card is centered in its slot.
 - The sounding line lies flat between the caption and the map, from the
   surface on the left to "2h+" on the right, the direction the row ages in.
-  Marks stack upward above the line, the lead runs out along it, and a click
-  or a drag picks the window nearest that depth, as on the upright line. The
-  key hints move up beside the window count.
+  Every window is a dot above the line at its depth; windows at nearly the
+  same depth share a spot that ends in "+N". The lead runs out along the
+  line, and a click or a drag picks the window nearest that depth, as on the
+  upright line. It is only built while the row is on. The key hints move to
+  the top right, and the map takes 0.85 of its height (never under 96 px).
 
 ## The sounding line **(owner: "earn the name", decision)**
 
