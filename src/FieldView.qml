@@ -170,7 +170,10 @@ Item {
   // instead, and the cards get the whole width.
   readonly property bool rowLayout: appearance.rowLayout
   readonly property real gaugeWidth: !rowLayout && width >= 1000 ? 112 * textUnit : 0
-  readonly property real flatGaugeHeight: rowLayout ? 58 * textUnit : 0
+  // Tall enough for three marks a column above the line, so windows used at
+  // nearly the same moment stack up before a "+N" takes over (with one, the
+  // "+N" labels of neighboring columns ran into each other).
+  readonly property real flatGaugeHeight: rowLayout ? 74 * textUnit : 0
   // Cards take the shape of this screen, which is the focused monitor.
   readonly property var stage: rowLayout
     ? Layout.rowStage(width, height, deepTop, mapHeight + captionHeight + flatGaugeHeight + margin + 30 * unit,

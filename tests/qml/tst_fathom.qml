@@ -1169,6 +1169,7 @@ TestCase {
     const gauge = fathom.fieldView.flatGauge
     verify(gauge.visible)
     compare(gauge.marks.length, 3)
+    verify(gauge.maxRows >= 3, "windows used at nearly the same moment stack up before a +N")
     const x = Layout.soundingY(Math.log(3) / Math.LN2, gauge.lineStart, gauge.lineEnd)
     mouseClick(gauge, x, gauge.marksBottom - 4)
     compare(fathom.selectedIndex, 2)
