@@ -6,6 +6,7 @@
   as a row: the selection in the middle, the windows you passed on its left
   and older ones on its right, each step smaller and fainter, with the
   sounding line lying flat between the cards and the map. Off by default.
+  By raffsmagic (#17).
 
 ## 0.3.5 (2026-11-13)
 
