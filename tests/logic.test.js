@@ -513,6 +513,54 @@ test('the stage leaves room on the left for the sounding line', () => {
   assert.ok(back.x + back.width / 2 <= 1600);
 });
 
+test('the row centers the selection, with passed windows left and older ones right', () => {
+  const row = Layout.rowStage(1600, 1000, 70, 380, 1.6, 0);
+  close(row.frontX, 800);
+  close(row.frontWidth / row.frontHeight, 1.6, 1e-6);
+  assert.ok(row.frontY + row.frontHeight / 2 <= 1000 - 380 + 1e-6, 'the front card stays above the caption');
+  const front = Layout.rowPlane(row, 0);
+  close(front.x, row.frontX);
+  close(front.width, row.frontWidth);
+  assert.equal(front.opacity, 1);
+  for (const direction of [-1, 1]) {
+    let previousEdge = row.frontWidth / 2;
+    let previous = front;
+    for (let d = 1; d <= Layout.ROW_STEPS; d++) {
+      const card = Layout.rowPlane(row, direction * d);
+      const edge = Math.abs(card.x - row.frontX) + card.width / 2;
+      assert.ok(edge - previousEdge >= 80, `card ${direction * d} shows at least an 80 px band (${edge - previousEdge})`);
+      assert.ok(card.width < previous.width && card.z < previous.z && card.opacity < previous.opacity && card.opacity > 0);
+      close(card.y, row.frontY);
+      previousEdge = edge;
+      previous = card;
+    }
+    // The last card ends at the margin, on screen.
+    close(row.frontX + direction * previousEdge, direction < 0 ? 1600 * 0.03 : 1600 * 0.97, 1e-6);
+    assert.equal(Layout.rowPlane(row, direction * (Layout.ROW_STEPS + 1)).opacity, 0);
+  }
+  // Mirror images of each other.
+  const left = Layout.rowPlane(row, -2);
+  const right = Layout.rowPlane(row, 2);
+  close(row.frontX - left.x, right.x - row.frontX);
+  close(left.width, right.width);
+});
+
+test('the row moves continuously through the middle and keeps clear of an inset', () => {
+  const row = Layout.rowStage(1600, 1000, 70, 380, 1.6, 0);
+  const at = Layout.rowPlane(row, 0);
+  for (const r of [-1e-6, 1e-6]) {
+    const near = Layout.rowPlane(row, r);
+    close(near.x, at.x, 1e-3);
+    close(near.width, at.width, 1e-3);
+  }
+  const inset = Layout.rowStage(1600, 1000, 70, 380, 1.6, 150);
+  const last = Layout.rowPlane(inset, -Layout.ROW_STEPS);
+  assert.ok(last.x - last.width / 2 >= 150, 'the leftmost card starts right of the inset');
+  // A short screen holds the front card to the height it has.
+  const short = Layout.rowStage(1600, 500, 70, 380, 1.6, 0);
+  close(short.frontHeight, 50);
+});
+
 test('the sounding line reads depth from the surface down', () => {
   close(Layout.soundingY(0, 100, 500), 100);
   close(Layout.soundingY(4, 100, 500), 300);

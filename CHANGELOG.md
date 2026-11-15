@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `layout = "row"` in the `[fathom]` section of `shell.toml` lays the Deep out
+  as a row: the selection in the middle, the windows you passed on its left
+  and older ones on its right, each step smaller and fainter, with the
+  sounding line lying flat between the cards and the map. Off by default.
+
 ## 0.3.5 (2026-11-13)
 
 - A last-seen frame takes at most 640 by 640 pixels. Its width was held to

@@ -25,6 +25,11 @@ QtObject {
   // The card's surface stays behind the whole card unless the value is
   // "false"; then only the header strip keeps it, and the preview stands free.
   readonly property bool cardBackground: String(Commons.Color.pick("fathom.card-background", "")).trim().toLowerCase() !== "false"
+  // How the Deep lays the windows out. "row" puts the selection in the
+  // middle, the windows already passed to its left and the older ones to its
+  // right, with the sounding line laid flat between the cards and the map;
+  // any other value keeps the stack receding up and to the right.
+  readonly property bool rowLayout: String(Commons.Color.pick("fathom.layout", "")).trim().toLowerCase() === "row"
 
   function dimension(value, fallback) {
     const text = String(value).trim()

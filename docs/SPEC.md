@@ -133,7 +133,8 @@ whatever the windows' own shapes are.
   steps.
 - The camera animates between cards in 220 ms (OutCubic).
 - Captures run only for cards near the camera (from one step passed to the
-  last visible card) and only while the field is open.
+  last visible card; in the row, every card it shows) and only while the field
+  is open.
 - Hyprland renders a window for capture only while it lies within its
   monitor's area, so windows a scrolling layout parks beside the screen never
   deliver a frame (seen on the device; not a matter of minimizing, which
@@ -153,6 +154,32 @@ whatever the windows' own shapes are.
   ticket, and the frame is kept only if the toplevel now at the address is
   the one the grab began with. **(decision)**
 - Urgent windows (Hyprland's urgent flag) get a red ring and dot.
+
+## The row (`layout = "row"`) **(decision)**
+
+An optional arrangement of the same cards, for anyone who wants to keep the
+windows they have passed in view. Without the key nothing changes.
+
+- The selection's card is centered, at 0.46 of the width between the margins
+  (less when the height does not allow it).
+- Windows already passed sit to its left, older ones to its right, in the
+  same recency order as the stack. Each step away from the camera scales a
+  card by 0.6 and takes 0.18 of its opacity; three cards show on each side,
+  and the map shows the rest.
+- Each card's outer edge steps out by a share of the side's room that shrinks
+  by 0.86 per step, so the last card ends at the margin and every card shows a
+  band beyond the one nearer the middle. On the right the header is mirrored
+  (icon and title on the card's right edge), so it falls in that band.
+- Fog counts steps either side of the camera, and captures run for every card
+  the row shows (up to three steps either side).
+- With `card-fit = "window"`, a fitted card is centered in its slot.
+- The sounding line lies flat between the caption and the map, from the
+  surface on the left to "2h+" on the right, the direction the row ages in.
+  Every window is a dot above the line at its depth; windows at nearly the
+  same depth share a spot that ends in "+N". The lead runs out along the
+  line, and a click or a drag picks the window nearest that depth, as on the
+  upright line. It is only built while the row is on. The key hints move to
+  the top right, and the map takes 0.85 of its height (never under 96 px).
 
 ## The sounding line **(owner: "earn the name", decision)**
 
@@ -175,7 +202,7 @@ sounding line reads it the way a lead line reads water.
 - The caption reads the depth ("2.3 fathoms"; "at the surface" when just
   used; nothing for the focused window or an estimate).
 - Shown when the screen is at least 1000 px wide; the Deep is laid out to its
-  right.
+  right. In the row it lies flat instead (see "The row").
 
 ## The map **(owner, decision)**
 

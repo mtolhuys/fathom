@@ -42,9 +42,11 @@ Item {
   // What the card draws the window in (the `captures` report says it).
   readonly property size previewSize: Qt.size(frame.width, frame.height)
   // Captures run only for cards near the camera; the rest of the field is
-  // on the map, and capturing it would cost the compositor for nothing.
+  // on the map, and capturing it would cost the compositor for nothing. The
+  // row shows ROW_STEPS cards on both sides, so it captures those.
   readonly property bool capturing: controller !== null && controller.opened && inField
-    && r > -1.2 && r < Layout.VISIBLE_STEPS + 0.5 && !!toplevel && !!toplevel.wayland
+    && (inRow ? Math.abs(r) < Layout.ROW_STEPS + 0.5 : r > -1.2 && r < Layout.VISIBLE_STEPS + 0.5)
+    && !!toplevel && !!toplevel.wayland
 
   // The window's own shape, for fitting it into the card: the frame's size
   // once one arrived, else Hyprland's reported size, else 16:10.
@@ -66,9 +68,13 @@ Item {
   // of band stop driving their x/y/width/height/z/opacity/pad/radius/fog
   // bindings every animation frame, and since the same object reference
   // comes back each time, the var change signal stays quiet.
-  readonly property var geometry: !stage || r < -1.5 || r > Layout.VISIBLE_STEPS + 1
+  // In the row (layout = "row") the band is [-(ROW_STEPS + 1), ROW_STEPS + 1],
+  // where rowPlane's opacity reaches 0 on both sides.
+  readonly property bool inRow: appearance.rowLayout
+  readonly property var geometry: !stage
+    || (inRow ? Math.abs(r) > Layout.ROW_STEPS + 1 : (r < -1.5 || r > Layout.VISIBLE_STEPS + 1))
     ? Layout.OFFSCREEN_GEOMETRY
-    : Layout.deepPlane(stage, r)
+    : (inRow ? Layout.rowPlane(stage, r) : Layout.deepPlane(stage, r))
   readonly property real depthScale: Math.min(1, geometry.scale)
   readonly property real headerHeight: Math.max(18 * textUnit, Math.min(30 * textUnit, geometry.height * 0.1))
   // Fathom's own padding follows the screen; `card-padding` replaces it, in
@@ -83,8 +89,11 @@ Item {
   // The shell's corner radius on the front card, shrinking with depth like
   // the card itself (screen pixels: zero stays zero).
   readonly property real radius: card.appearance.cornerRadius * depthScale
+  // Steps from the camera that fog counts: behind it in the stack, either
+  // side of it in the row.
+  readonly property real fogSteps: inRow ? Math.abs(r) : r
   readonly property real fog: entry
-    ? theme.fogStrength * Math.min(0.7, Math.max(0, Math.min(1, r)) * (0.12 + Depth.fogForDepth(entry.depth) * 0.75) + 0.05 * Math.max(0, r - 1))
+    ? theme.fogStrength * Math.min(0.7, Math.max(0, Math.min(1, fogSteps)) * (0.12 + Depth.fogForDepth(entry.depth) * 0.75) + 0.05 * Math.max(0, fogSteps - 1))
     : 0
   readonly property string titleText: toplevel && toplevel.title ? String(toplevel.title) : (entry ? entry.title : "")
   // Outside its monitor's area (a scrolling layout parked it beside the
@@ -111,7 +120,9 @@ Item {
     frame.grabToImage(result => target.keepSnapshot(ticket, result), Qt.size(size.width, size.height))
   }
 
-  x: geometry.x - geometry.width / 2 + (box ? box.x : 0)
+  // A fitted card keeps its box's top-right corner in the stack, the corner
+  // the stack steps by; in the row it is centered in its slot.
+  x: geometry.x - geometry.width / 2 + (box ? (inRow ? (geometry.width - box.width) / 2 : box.x) : 0)
   y: geometry.y - geometry.height / 2
   width: box ? box.width : geometry.width
   height: box ? box.height : geometry.height
@@ -176,10 +187,16 @@ Item {
     width: card.width - x * 2
     height: card.headerHeight
     opacity: 1 - card.fog * 0.45
+    // On the right of the row the card in front covers this card's left
+    // side, so the icon and title move to its right edge, where they show.
+    LayoutMirroring.enabled: card.inRow && card.r > 0
+    LayoutMirroring.childrenInherit: true
 
     AppIcon {
       id: headerIcon
 
+      // Anchored, not placed, so the row's mirroring moves it too.
+      anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       size: card.headerHeight * 0.6
       source: card.entry ? card.entry.icon : ""
@@ -192,6 +209,9 @@ Item {
       anchors.right: headerAge.left
       anchors.rightMargin: 8 * card.unit
       anchors.verticalCenter: parent.verticalCenter
+      // Named in the row so its mirroring flips it and the title ends at the
+      // icon; reset elsewhere, so a title keeps its own direction.
+      horizontalAlignment: card.inRow ? Text.AlignLeft : undefined
       elide: Text.ElideRight
       color: card.theme.text
       font.family: Commons.Style.font.family

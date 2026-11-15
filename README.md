@@ -225,6 +225,7 @@ open-on-single = true
 card-fit = "window"
 card-padding = 0
 card-background = false
+layout = "row"
 ```
 
 | Key | Default | Description |
@@ -236,6 +237,7 @@ card-background = false
 | `card-fit` | `"screen"` | When `"window"`, each card takes its window's own shape instead of the monitor's, so a narrow window (a column of a scrolling layout) gets a narrow card. |
 | `card-padding` | follows the screen's size | The space between the card's edge and its preview, in pixels on the front card. |
 | `card-background` | `true` | When `false`, only the header strip keeps the card's surface and the preview stands free. |
+| `layout` | `"stack"` | When `"row"`, the selection sits in the middle with the windows you passed on its left and older ones on its right, and the sounding line lies flat between the cards and the map. |
 
 The sizes are nonnegative pixels; zero is supported. Omit a key to follow
 the shell again: `corner-radius` falls back to Hyprland's rounding,
@@ -249,6 +251,8 @@ takes the surface from behind the preview. A fitted card keeps the top-right
 corner the stack steps by, the header (icon, title, age) and the selection's
 ring; `card-padding` shrinks with depth like the card and falls back to
 Fathom's own when it is empty, negative or nonnumeric.
+Only `row` (in any case) lays the Deep out as a row; any other value keeps
+the stack.
 Omarchy watches this user file and layers it over the current theme, so these
 preferences update live, even while the overlay is open, and survive theme
 changes and plugin updates. Themes may also provide the same `[fathom]`
