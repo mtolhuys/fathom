@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.6 (2026-11-15)
 
 - `layout = "row"` in the `[fathom]` section of `shell.toml` lays the Deep out
   as a row: the selection in the middle, the windows you passed on its left
